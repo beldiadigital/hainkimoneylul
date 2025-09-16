@@ -1,0 +1,47 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "hain-kim",
+          "appId": "1:366202795388:android:74c0181d183cc9c38de0f9",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "hain-kim",
+          "appId": "1:366202795388:ios:e21674bd9d920f5a8de0f9",
+          "uploadDebugSymbols": true,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "hain-kim",
+          "appId": "1:366202795388:ios:e21674bd9d920f5a8de0f9",
+          "uploadDebugSymbols": true,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "hain-kim",
+          "configurations": {
+            "android": "1:366202795388:android:74c0181d183cc9c38de0f9",
+            "ios": "1:366202795388:ios:e21674bd9d920f5a8de0f9",
+            "macos": "1:366202795388:ios:e21674bd9d920f5a8de0f9",
+            "web": "1:366202795388:web:6dc76ab9b33a47168de0f9",
+            "windows": "1:366202795388:web:c527f9700a69359b8de0f9"
+          }
+        }
+      }
+    }
+  }
+}

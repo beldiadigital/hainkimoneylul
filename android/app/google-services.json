@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "366202795388",
+    "firebase_url": "https://hain-kim-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "hain-kim",
+    "storage_bucket": "hain-kim.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:366202795388:android:74c0181d183cc9c38de0f9",
+        "android_client_info": {
+          "package_name": "com.example.hainkimoneylul"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgVtvWUvjAre5q8yjR8EU83UGZPbx9aTI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:366202795388:android:8248ab4d4ba124ac8de0f9",
+        "android_client_info": {
+          "package_name": "com.example.son"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgVtvWUvjAre5q8yjR8EU83UGZPbx9aTI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
