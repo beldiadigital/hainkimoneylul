@@ -1,6 +1,10 @@
-# Kim Hain? - Flutter Oyun Uygulaması
+# Hain Kim? 🕵️‍♂️
 
-Türkiye'nin popüler "Kim Hain?" oyununun mobil versiyonu. Firebase, AdMob reklamları ve VIP abonelik sistemi ile geliştirilmiştir.
+> Social deduction game where players try to identify the impostor among celebrities.
+
+**Developer**: İsmail Bahadır Arıca  
+**Company**: Beldia Digital  
+**Version**: 1.0.0+8
 
 ## Özellikler
 

@@ -10,7 +10,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.hainkimoneylul"
+    namespace = "com.beldiadigital.haiKim"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,8 +24,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.hainkimoneylul"
+        // Beldia Digital unique Application ID
+        applicationId = "com.beldiadigital.haiKim"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 23 // Firebase Auth gereksinimi

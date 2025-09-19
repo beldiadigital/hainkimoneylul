@@ -14,90 +14,60 @@ class AdMobService {
   static InterstitialAd? _interstitialAd;
   static RewardedAd? _rewardedAd;
 
-  // Test Ad Unit IDs (production'da gerçek ID'ler kullanılacak)
+  // Test Flight ve Debug için test modu
+  static bool get isTestMode {
+    return kDebugMode; // Debug build'lerde test modu
+  }
+
+  // Production Ad Unit IDs (test modundan çıkarıldı)
   static String get bannerAdUnitId {
     if (kIsWeb) return ''; // Web'de AdMob yok
 
-    if (kDebugMode) {
-      // Test Ad Unit IDs
+    // Test mode check
+    if (isTestMode) {
       return Platform.isAndroid
-          ? 'ca-app-pub-3940256099942544/6300978111' // Test Banner
+          ? 'ca-app-pub-3940256099942544/6300978111' // Test Banner Android
           : 'ca-app-pub-3940256099942544/2934735716'; // Test Banner iOS
-    } else {
-      // Production Ad Unit IDs - YENİ BANNER ID'Sİ GÜNCELLENDİ
-      return Platform.isAndroid
-          ? 'ca-app-pub-9098317866883430/6819583156' // Android Banner (YENİ)
-          : 'ca-app-pub-9098317866883430/6819583156'; // iOS Banner (YENİ)
     }
+
+    // Production Ad Unit IDs - Gerçek ID'ler
+    return Platform.isAndroid
+        ? 'ca-app-pub-9098317866883430/6819583156' // Android Banner
+        : 'ca-app-pub-9098317866883430/6819583156'; // iOS Banner
   }
 
   static String get interstitialAdUnitId {
     if (kIsWeb) return ''; // Web'de AdMob yok
 
-    if (kDebugMode) {
+    // Test mode check
+    if (isTestMode) {
       return Platform.isAndroid
-          ? 'ca-app-pub-3940256099942544/1033173712' // Test Interstitial
+          ? 'ca-app-pub-3940256099942544/1033173712' // Test Interstitial Android
           : 'ca-app-pub-3940256099942544/4411468910'; // Test Interstitial iOS
-    } else {
-      // Production Ad Unit IDs - Gerçek ID'ler
-      return Platform.isAndroid
-          ? 'ca-app-pub-9098317866883430/8982674071' // Android Interstitial
-          : 'ca-app-pub-9098317866883430/8982674071'; // iOS Interstitial (aynı ID)
     }
+
+    // Production Ad Unit IDs - Gerçek ID'ler
+    return Platform.isAndroid
+        ? 'ca-app-pub-9098317866883430/8982674071' // Android Interstitial
+        : 'ca-app-pub-9098317866883430/8982674071'; // iOS Interstitial
   }
 
   static String get rewardedAdUnitId {
     if (kIsWeb) return ''; // Web'de AdMob yok
 
-    if (kDebugMode) {
-      return Platform.isAndroid
-          ? 'ca-app-pub-3940256099942544/5224354917' // Test Rewarded
-          : 'ca-app-pub-3940256099942544/1712485313'; // Test Rewarded iOS
-    } else {
-      // Production Ad Unit IDs - Bu ID'leri AdMob konsolundan oluşturmanız gerekiyor
-      return Platform.isAndroid
-          ? 'ca-app-pub-9098317866883430/REWARDED_ANDROID_ID'
-          : 'ca-app-pub-9098317866883430/REWARDED_IOS_ID';
-    }
+    // Production Ad Unit IDs - Bu ID'leri AdMob konsolundan oluşturmanız gerekiyor
+    return Platform.isAndroid
+        ? 'ca-app-pub-9098317866883430/REWARDED_ANDROID_ID'
+        : 'ca-app-pub-9098317866883430/REWARDED_IOS_ID';
   }
 
   // AdMob'u başlat
   static Future<void> initializeAdMob() async {
     await MobileAds.instance.initialize();
 
-    // GDPR ve CCPA compliance için
-    RequestConfiguration configuration = RequestConfiguration(
-      testDeviceIds: kDebugMode ? ['TEST_DEVICE_ID'] : [],
-    );
+    // Production için temiz configuration
+    RequestConfiguration configuration = RequestConfiguration();
     MobileAds.instance.updateRequestConfiguration(configuration);
-  }
-
-  // Banner reklam oluştur
-  static BannerAd? createBannerAd() {
-    return BannerAd(
-      adUnitId: bannerAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          print('Banner ad loaded.');
-          _numBannerLoadAttempts = 0;
-          FirebaseService.logAdViewed('banner');
-        },
-        onAdFailedToLoad: (ad, err) {
-          print('Banner ad failed to load: $err');
-          ad.dispose();
-          _numBannerLoadAttempts += 1;
-        },
-        onAdOpened: (ad) {
-          print('Banner ad opened.');
-          FirebaseService.logEvent('ad_clicked', {'ad_type': 'banner'});
-        },
-        onAdClosed: (ad) {
-          print('Banner ad closed.');
-        },
-      ),
-    );
   }
 
   // Banner reklam durumu
@@ -106,7 +76,28 @@ class AdMobService {
 
   // Banner reklam yükle
   static void loadBannerAd() {
-    _bannerAd = createBannerAd();
+    _bannerAd = BannerAd(
+      adUnitId: bannerAdUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          _numBannerLoadAttempts = 0;
+          FirebaseService.logAdViewed('banner');
+        },
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+          _numBannerLoadAttempts += 1;
+          _bannerAd = null;
+          if (_numBannerLoadAttempts < maxFailedLoadAttempts) {
+            loadBannerAd();
+          }
+        },
+        onAdOpened: (ad) {
+          FirebaseService.logEvent('ad_clicked', {'ad_type': 'banner'});
+        },
+      ),
+    );
     _bannerAd!.load();
   }
 
@@ -117,13 +108,11 @@ class AdMobService {
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
-          print('Interstitial ad loaded.');
           _interstitialAd = ad;
           _numInterstitialLoadAttempts = 0;
           _interstitialAd!.setImmersiveMode(true);
         },
         onAdFailedToLoad: (err) {
-          print('Interstitial ad failed to load: $err');
           _numInterstitialLoadAttempts += 1;
           _interstitialAd = null;
           if (_numInterstitialLoadAttempts < maxFailedLoadAttempts) {
@@ -141,12 +130,10 @@ class AdMobService {
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
-          print('Rewarded ad loaded.');
           _rewardedAd = ad;
           _numRewardedLoadAttempts = 0;
         },
         onAdFailedToLoad: (err) {
-          print('Rewarded ad failed to load: $err');
           _numRewardedLoadAttempts += 1;
           _rewardedAd = null;
           if (_numRewardedLoadAttempts < maxFailedLoadAttempts) {
@@ -172,24 +159,20 @@ class AdMobService {
   // Interstitial reklam göster
   static void showInterstitialAd({VoidCallback? onAdDismissed}) {
     if (_interstitialAd == null) {
-      print('Warning: attempt to show interstitial before loaded.');
       onAdDismissed?.call();
       return;
     }
 
     _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
-        print('Interstitial ad showed fullscreen content.');
         FirebaseService.logAdViewed('interstitial');
       },
       onAdDismissedFullScreenContent: (ad) {
-        print('Interstitial ad dismissed fullscreen content.');
         ad.dispose();
         loadInterstitialAd();
         onAdDismissed?.call();
       },
       onAdFailedToShowFullScreenContent: (ad, err) {
-        print('Interstitial ad failed to show fullscreen content: $err');
         ad.dispose();
         loadInterstitialAd();
         onAdDismissed?.call();
@@ -206,24 +189,20 @@ class AdMobService {
     VoidCallback? onAdDismissed,
   }) {
     if (_rewardedAd == null) {
-      print('Warning: attempt to show rewarded before loaded.');
       onAdDismissed?.call();
       return;
     }
 
     _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
-        print('Rewarded ad showed fullscreen content.');
         FirebaseService.logAdViewed('rewarded');
       },
       onAdDismissedFullScreenContent: (ad) {
-        print('Rewarded ad dismissed fullscreen content.');
         ad.dispose();
         loadRewardedAd();
         onAdDismissed?.call();
       },
       onAdFailedToShowFullScreenContent: (ad, err) {
-        print('Rewarded ad failed to show fullscreen content: $err');
         ad.dispose();
         loadRewardedAd();
         onAdDismissed?.call();
@@ -232,7 +211,6 @@ class AdMobService {
 
     _rewardedAd!.show(
       onUserEarnedReward: (ad, reward) {
-        print('User earned reward: ${reward.amount} ${reward.type}');
         FirebaseService.logEvent('rewarded_ad_earned', {
           'reward_amount': reward.amount,
           'reward_type': reward.type,
