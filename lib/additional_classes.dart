@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/admob_service.dart';
 import 'services/firebase_service.dart';
 import 'services/review_service.dart';
+import 'services/vip_service.dart';
 
 // Tema değişikliklerini yöneten Provider sınıfı
 class ThemeProvider extends ChangeNotifier {
@@ -406,6 +407,8 @@ class _KimHainHomeState extends State<KimHainHome>
     // Web'de AdMob çalışmaz, sadece mobile'da yükle
     if (!kIsWeb) {
       _loadBannerAd();
+      // VIP abonelik servisini başlat
+      VipSubscriptionService.initialize();
     }
   }
 
@@ -1695,7 +1698,7 @@ class _KimHainHomeState extends State<KimHainHome>
           },
         ),
       ),
-      bottomNavigationBar: (!kIsWeb && _isBannerAdReady)
+      bottomNavigationBar: (!kIsWeb && _isBannerAdReady && !VipSubscriptionService.isVipActive)
           ? Container(
               alignment: Alignment.center,
               width: _bannerAd!.size.width.toDouble(),
@@ -2125,8 +2128,10 @@ class _GameScreenState extends State<GameScreen>
                           // Oyun tamamlandı - review service'e bildir
                           await ReviewService.onGameCompleted();
                           
-                          // Interstitial reklam göster
-                          AdMobService.showInterstitialAd();
+                          // VIP değilse interstitial reklam göster
+                          if (!VipSubscriptionService.isVipActive) {
+                            AdMobService.showInterstitialAd();
+                          }
                           
                           // Yeni lobi oluştur ve oyuncuları aktar
                           if (widget.lobbyId != null && widget.currentPlayerName != null) {
@@ -2655,6 +2660,216 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
     );
   }
 
+  void _showVipDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1C1C1E)
+              : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.star, color: Colors.amber, size: 28),
+              const SizedBox(width: 8),
+              Text(
+                'VIP Üyelik',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.titleLarge?.color,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '🎯 VIP Özellikler:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              _buildVipFeature('🚫 Tüm reklamları kaldır'),
+              _buildVipFeature('🎮 Kesintisiz oyun deneyimi'),
+              _buildVipFeature('⚡ Daha hızlı yükleme'),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildSubscriptionCard(
+                      'Aylık',
+                      '₺9,99',
+                      '/ay',
+                      () => _purchaseSubscription('monthly'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildSubscriptionCard(
+                      'Yıllık',
+                      '₺59,99',
+                      '/yıl',
+                      () => _purchaseSubscription('yearly'),
+                      isPopular: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('İptal'),
+            ),
+            TextButton(
+              onPressed: () => _restorePurchases(),
+              child: const Text('Satın Almaları Geri Yükle'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildVipFeature(String feature) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        feature,
+        style: TextStyle(
+          fontSize: 14,
+          color: Theme.of(context).textTheme.bodyMedium?.color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionCard(String title, String price, String period, VoidCallback onTap, {bool isPopular = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: isPopular
+              ? const LinearGradient(
+                  colors: [Color(0xFF19B4FF), Color(0xFF63D6FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isPopular ? null : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2C2C2E) : const Color(0xFFF8F9FA)),
+          borderRadius: BorderRadius.circular(12),
+          border: isPopular ? null : Border.all(color: const Color(0xFF19B4FF), width: 1),
+        ),
+        child: Column(
+          children: [
+            if (isPopular)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'EN POPÜLER',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            if (isPopular) const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isPopular ? Colors.white : Theme.of(context).textTheme.titleMedium?.color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              price,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: isPopular ? Colors.white : const Color(0xFF19B4FF),
+              ),
+            ),
+            Text(
+              period,
+              style: TextStyle(
+                fontSize: 12,
+                color: isPopular ? Colors.white70 : Theme.of(context).textTheme.bodySmall?.color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _purchaseSubscription(String type) async {
+    try {
+      bool success;
+      if (type == 'monthly') {
+        success = await VipSubscriptionService.purchaseMonthly();
+      } else {
+        success = await VipSubscriptionService.purchaseYearly();
+      }
+      
+      if (success && mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 VIP abonelik başlatıldı!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {}); // VIP durumunu güncelle
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Satın alma hatası: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restorePurchases() async {
+    try {
+      await VipSubscriptionService.restorePurchases();
+      if (mounted) {
+        Navigator.of(context).pop();
+        setState(() {}); // VIP durumunu güncelle
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Satın almalar geri yüklendi'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Geri yükleme hatası: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -2695,6 +2910,56 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  // VIP Abonelik Bölümü
+                  _ModernSettingsCard(
+                    title: '⭐ VIP Üyelik',
+                    children: [
+                      if (VipSubscriptionService.isVipActive) ...[
+                        _SettingsRow(
+                          title: 'VIP Aktif',
+                          subtitle: 'Premium özellikler aktif',
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              'PRO',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (VipSubscriptionService.vipExpiryDate != null)
+                          _SettingsRow(
+                            title: 'Bitiş Tarihi',
+                            subtitle: '${VipSubscriptionService.vipExpiryDate!.day}/${VipSubscriptionService.vipExpiryDate!.month}/${VipSubscriptionService.vipExpiryDate!.year}',
+                            trailing: const Icon(Icons.schedule, color: Colors.grey),
+                          ),
+                      ] else ...[
+                        _SettingsRow(
+                          title: 'VIP Üyelik',
+                          subtitle: 'Tüm reklamları kaldır',
+                          trailing: ElevatedButton(
+                            onPressed: () => _showVipDialog(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF19B4FF),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            ),
+                            child: const Text('SATIN AL'),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+                  
                   // Oyun Süresi
                   _ModernSettingsCard(
                     title: 'Oyun Süresi',
