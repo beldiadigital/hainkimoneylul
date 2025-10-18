@@ -2698,7 +2698,7 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
               const SizedBox(height: 20),
               _buildSubscriptionCard(
                 'VIP Üyelik',
-                '₺9,99',
+                '\$1.99',
                 '/ay',
                 () => _purchaseSubscription('monthly'),
                 isPopular: true,
