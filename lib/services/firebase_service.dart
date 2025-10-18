@@ -322,7 +322,7 @@ class FirebaseService {
           lobbyData['players'] ?? [],
         );
 
-        if (players.length < 1) { // SCREENSHOT: 1 oyuncuyla test
+        if (players.isEmpty) { // SCREENSHOT: 1 oyuncuyla test
           print('En az 1 oyuncu gerekli');
           return false;
         }
@@ -664,6 +664,27 @@ class FirebaseService {
       print('❌ Yeni lobi oluşturma hatası: $e');
       await recordError(e, StackTrace.current);
       return null;
+    }
+  }
+
+  // Tüm oyuncular için yeni lobby isteği gönder
+  static Future<void> requestNewLobbyForAllPlayers(String lobbyId) async {
+    try {
+      print('🔄 Tüm oyuncular için yeni lobby isteği gönderiliyor...');
+      
+      final lobbyRef = FirebaseFirestore.instance.collection('lobbies').doc(lobbyId);
+      
+      await lobbyRef.update({
+        'new_lobby_requested': true,
+        'new_lobby_requested_at': FieldValue.serverTimestamp(),
+      });
+      
+      print('✅ Yeni lobby isteği başarıyla gönderildi');
+      
+    } catch (e) {
+      print('❌ Yeni lobby isteği gönderme hatası: $e');
+      await recordError(e, StackTrace.current);
+      rethrow;
     }
   }
 }
