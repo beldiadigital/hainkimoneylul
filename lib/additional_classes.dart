@@ -11,6 +11,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/admob_service.dart';
 import 'services/firebase_service.dart';
+import 'services/review_service.dart';
 
 // Tema değişikliklerini yöneten Provider sınıfı
 class ThemeProvider extends ChangeNotifier {
@@ -2121,6 +2122,9 @@ class _GameScreenState extends State<GameScreen>
                         onPressed: () async {
                           print('🔄 Lobiye dönüş başlatılıyor...');
                           
+                          // Oyun tamamlandı - review service'e bildir
+                          await ReviewService.onGameCompleted();
+                          
                           // Interstitial reklam göster
                           AdMobService.showInterstitialAd();
                           
@@ -2133,13 +2137,30 @@ class _GameScreenState extends State<GameScreen>
                             
                             if (newLobbyId != null) {
                               print('✅ Yeni lobiye aktarım başarılı: $newLobbyId');
-                              // Yeni lobi ID'sini güncelle
-                              Navigator.pop(context, newLobbyId);
+                              // Ana ekrana dön ve yeni lobby kodu ile lobi oluştur
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const KimHainHome(),
+                                ),
+                                (Route<dynamic> route) => false, // Tüm stack'i temizle
+                              );
+                              
+                              // Kısa bir gecikme sonra yeni lobiye git
+                              Future.delayed(const Duration(milliseconds: 500), () {
+                                if (mounted) {
+                                  // Burada yeni lobby ile lobiye katılma işlemi yapılacak
+                                  // Şimdilik ana ekrana dönüyor, kullanıcı kodu girip katılabilir
+                                }
+                              });
                             } else {
                               print('❌ Yeni lobi oluşturulamadı');
-                              // Fallback - eski sistemi kullan
-                              await FirebaseService.resetLobbyForNewGame(widget.lobbyId!);
-                              Navigator.pop(context);
+                              // Ana ekrana dön
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => const KimHainHome()),
+                                (Route<dynamic> route) => false,
+                              );
                             }
                           } else {
                             Navigator.pop(context);

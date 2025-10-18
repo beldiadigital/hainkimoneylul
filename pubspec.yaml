@@ -58,6 +58,9 @@ dependencies:
   # Share plugin for sharing content
   share_plus: ^10.1.1
   connectivity_plus: ^6.0.5
+  
+  # In-app review for rating prompts
+  in_app_review: ^2.0.9
 
 dev_dependencies:
   flutter_test:

@@ -14,9 +14,10 @@ class AdMobService {
   static InterstitialAd? _interstitialAd;
   static RewardedAd? _rewardedAd;
 
-  // Test Flight ve Debug için test modu
+  // Production modda gerçek reklamları göster
   static bool get isTestMode {
-    return kDebugMode; // Debug build'lerde test modu
+    // SADECE geliştirme sırasında true yap, production'da false
+    return false; // Production reklamları için
   }
 
   // Production Ad Unit IDs (test modundan çıkarıldı)
