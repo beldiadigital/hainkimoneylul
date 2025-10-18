@@ -6,10 +6,10 @@ class ReviewService {
   static const String _lastReviewPromptKey = 'last_review_prompt';
   static const String _gameCountKey = 'game_count';
   static const String _hasRatedKey = 'has_rated';
-  
+
   // Her 5 oyunda bir değerlendirme iste
   static const int gamesUntilReview = 5;
-  
+
   // Son değerlendirmeden sonra 7 gün bekle
   static const int daysBetweenReviews = 7;
 
@@ -19,7 +19,7 @@ class ReviewService {
   static Future<void> onGameCompleted() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Daha önce değerlendirme yapılmış mı?
       final hasRated = prefs.getBool(_hasRatedKey) ?? false;
       if (hasRated) return;
@@ -56,7 +56,7 @@ class ReviewService {
       if (await _inAppReview.isAvailable()) {
         print('🌟 Değerlendirme popup gösteriliyor...');
         await _inAppReview.requestReview();
-        
+
         // Kullanıcının değerlendirme yaptığını varsay
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool(_hasRatedKey, true);
@@ -105,11 +105,13 @@ class ReviewService {
       final gameCount = prefs.getInt(_gameCountKey) ?? 0;
       final hasRated = prefs.getBool(_hasRatedKey) ?? false;
       final lastPrompt = prefs.getInt(_lastReviewPromptKey) ?? 0;
-      
+
       print('📊 Review Stats:');
       print('  - Oyun sayısı: $gameCount');
       print('  - Değerlendirme yapıldı: $hasRated');
-      print('  - Son prompt: ${DateTime.fromMillisecondsSinceEpoch(lastPrompt)}');
+      print(
+        '  - Son prompt: ${DateTime.fromMillisecondsSinceEpoch(lastPrompt)}',
+      );
     }
   }
 }

@@ -7,11 +7,10 @@ class VipSubscriptionService {
   // Production App Store Product IDs - Bu ID'leri App Store Connect'te oluşturmanız gerekiyor
   static const String _monthlyProductId = '6754197922';
   static const String _yearlyProductId = 'hain_kim_vip_yearly';
-  
+
   // Local storage keys
   static const String _vipStatusKey = 'vip_status';
   static const String _vipExpiryKey = 'vip_expiry';
-  static const String _lastReceiptKey = 'last_receipt';
 
   static final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   static StreamSubscription<List<PurchaseDetails>>? _subscription;
@@ -33,7 +32,7 @@ class VipSubscriptionService {
     try {
       // In-app purchase kullanılabilir mi?
       _isAvailable = await _inAppPurchase.isAvailable();
-      
+
       if (!_isAvailable) {
         print('⚠️ In-app purchase kullanılamıyor');
         return;
@@ -62,7 +61,8 @@ class VipSubscriptionService {
     try {
       // Şu anda sadece aylık abonelik mevcut
       const Set<String> productIds = {_monthlyProductId};
-      final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(productIds);
+      final ProductDetailsResponse response = await _inAppPurchase
+          .queryProductDetails(productIds);
 
       if (response.notFoundIDs.isNotEmpty) {
         print('⚠️ Bulunamayan ürünler: ${response.notFoundIDs}');
@@ -70,7 +70,7 @@ class VipSubscriptionService {
 
       _products = response.productDetails;
       print('✅ ${_products.length} ürün yüklendi');
-      
+
       for (var product in _products) {
         print('📦 Ürün: ${product.id} - ${product.price}');
       }
@@ -91,7 +91,9 @@ class VipSubscriptionService {
   }
 
   /// Satın alma güncellemelerini işle
-  static Future<void> _handlePurchaseUpdates(List<PurchaseDetails> purchaseDetailsList) async {
+  static Future<void> _handlePurchaseUpdates(
+    List<PurchaseDetails> purchaseDetailsList,
+  ) async {
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
         print('⏳ Satın alma beklemede...');
@@ -99,8 +101,7 @@ class VipSubscriptionService {
         if (purchaseDetails.status == PurchaseStatus.error) {
           print('❌ Satın alma hatası: ${purchaseDetails.error}');
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
-                   purchaseDetails.status == PurchaseStatus.restored) {
-          
+            purchaseDetails.status == PurchaseStatus.restored) {
           // VIP aboneliği aktif et
           await _activateVip(purchaseDetails.productID);
           print('✅ VIP abonelik aktif edildi: ${purchaseDetails.productID}');
@@ -117,7 +118,7 @@ class VipSubscriptionService {
   static Future<void> _activateVip(String productId) async {
     try {
       _isVipActive = true;
-      
+
       // Sadece aylık abonelik için süre belirle
       if (productId == _monthlyProductId) {
         _vipExpiryDate = DateTime.now().add(const Duration(days: 30));
@@ -135,11 +136,11 @@ class VipSubscriptionService {
     try {
       final prefs = await SharedPreferences.getInstance();
       _isVipActive = prefs.getBool(_vipStatusKey) ?? false;
-      
+
       final expiryTimestamp = prefs.getInt(_vipExpiryKey);
       if (expiryTimestamp != null) {
         _vipExpiryDate = DateTime.fromMillisecondsSinceEpoch(expiryTimestamp);
-        
+
         // Süre dolmuş mu kontrol et
         if (_vipExpiryDate!.isBefore(DateTime.now())) {
           _isVipActive = false;
@@ -157,9 +158,12 @@ class VipSubscriptionService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_vipStatusKey, _isVipActive);
-      
+
       if (_vipExpiryDate != null) {
-        await prefs.setInt(_vipExpiryKey, _vipExpiryDate!.millisecondsSinceEpoch);
+        await prefs.setInt(
+          _vipExpiryKey,
+          _vipExpiryDate!.millisecondsSinceEpoch,
+        );
       } else {
         await prefs.remove(_vipExpiryKey);
       }
@@ -181,8 +185,10 @@ class VipSubscriptionService {
   /// Ürün satın al
   static Future<bool> _purchaseProduct(String productId) async {
     try {
-      final ProductDetails? product = _products.where((p) => p.id == productId).firstOrNull;
-      
+      final ProductDetails? product = _products
+          .where((p) => p.id == productId)
+          .firstOrNull;
+
       if (product == null) {
         print('❌ Ürün bulunamadı: $productId');
         return false;
@@ -191,9 +197,11 @@ class VipSubscriptionService {
       print('🛒 Satın alma başlatılıyor: ${product.id} - ${product.price}');
 
       // Abonelik satın alma
-      final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
+      final PurchaseParam purchaseParam = PurchaseParam(
+        productDetails: product,
+      );
       await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-      
+
       return true;
     } catch (e) {
       print('❌ Satın alma hatası: $e');

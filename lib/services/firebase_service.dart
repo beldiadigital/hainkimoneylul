@@ -164,7 +164,8 @@ class FirebaseService {
       final connectivityResults = await Connectivity().checkConnectivity();
 
       // Bağlantı yoksa direkt false döndür
-      if (connectivityResults.contains(ConnectivityResult.none) || connectivityResults.isEmpty) {
+      if (connectivityResults.contains(ConnectivityResult.none) ||
+          connectivityResults.isEmpty) {
         print('❌ İnternet bağlantısı yok');
         return false;
       }
@@ -308,45 +309,52 @@ class FirebaseService {
   static Future<bool> startGame(String lobbyId) async {
     try {
       final lobbyRef = firestore.collection('lobbies').doc(lobbyId);
-      
+
       return await firestore.runTransaction((transaction) async {
         final lobbyDoc = await transaction.get(lobbyRef);
 
         if (!lobbyDoc.exists) return false;
 
         final lobbyData = lobbyDoc.data()!;
-        
-        print('🔍 startGame başında lobby durumu: started=${lobbyData['game_started']}, ended=${lobbyData['game_ended']}, status=${lobbyData['status']}');
-        
+
+        print(
+          '🔍 startGame başında lobby durumu: started=${lobbyData['game_started']}, ended=${lobbyData['game_ended']}, status=${lobbyData['status']}',
+        );
+
         final List<String> players = List<String>.from(
           lobbyData['players'] ?? [],
         );
 
-        if (players.isEmpty) { // SCREENSHOT: 1 oyuncuyla test
+        if (players.isEmpty) {
+          // SCREENSHOT: 1 oyuncuyla test
           print('En az 1 oyuncu gerekli');
           return false;
         }
 
         // Sadece gerçekten aktif oyun varsa dur
-        if (lobbyData['status'] == 'playing' && lobbyData['game_started'] == true && lobbyData['game_ended'] != true) {
-          print('🎮 Oyun zaten aktif - çıkılıyor (started: ${lobbyData['game_started']}, ended: ${lobbyData['game_ended']})');
+        if (lobbyData['status'] == 'playing' &&
+            lobbyData['game_started'] == true &&
+            lobbyData['game_ended'] != true) {
+          print(
+            '🎮 Oyun zaten aktif - çıkılıyor (started: ${lobbyData['game_started']}, ended: ${lobbyData['game_ended']})',
+          );
           return true;
         }
 
         print('🆕 Yeni oyun başlatılıyor (game_ended yok)');
-        
+
         // ZORLA TEMİZLİK - hiçbir kalıntı bırakma
         // 1. Tüm eski verileri temizle
 
         // Rastgele ünlü ve hain seç (atomic operation sayesinde sadece bir kez)
         final Random random = Random();
-        
+
         // Ünlüleri kategoriye göre filtrele
         List<Map<String, dynamic>> availableCelebrities = [];
         final selectedCategories = List<String>.from(
-          lobbyData['gameSettings']?['selectedCategories'] ?? []
+          lobbyData['gameSettings']?['selectedCategories'] ?? [],
         );
-        
+
         if (selectedCategories.isNotEmpty) {
           // Sadece seçili kategorilerden ünlüleri al
           for (final celebrity in celebrities) {
@@ -358,22 +366,26 @@ class FirebaseService {
           // Kategoriler boşsa tüm ünlüleri dahil et
           availableCelebrities = List.from(celebrities);
         }
-        
+
         // Eğer hiç ünlü yoksa varsayılan liste kullan
         if (availableCelebrities.isEmpty) {
           availableCelebrities = List.from(celebrities);
         }
-        
-        final selectedCelebrity = availableCelebrities[random.nextInt(availableCelebrities.length)];
+
+        final selectedCelebrity =
+            availableCelebrities[random.nextInt(availableCelebrities.length)];
         final String celebrity = selectedCelebrity['name'];
-        
+
         // Oyuncu rollerini belirle (impostor/masum dağılımı)
         final int totalPlayers = players.length;
-        final gameSettings = Map<String, dynamic>.from(lobbyData['gameSettings'] ?? {});
-        
+        final gameSettings = Map<String, dynamic>.from(
+          lobbyData['gameSettings'] ?? {},
+        );
+
         // Hain sayısını belirle (ayarlardan veya varsayılan)
         int impostorCount;
-        if (gameSettings.containsKey('impostorCount') && gameSettings['impostorCount'] != null) {
+        if (gameSettings.containsKey('impostorCount') &&
+            gameSettings['impostorCount'] != null) {
           impostorCount = gameSettings['impostorCount'];
         } else {
           // DEBUG: 1 oyuncu = 0 hain, 2+ oyuncu normal mantık
@@ -382,29 +394,38 @@ class FirebaseService {
           } else if (totalPlayers == 2) {
             impostorCount = 1;
           } else {
-            impostorCount = (totalPlayers / 3).ceil().clamp(1, totalPlayers - 1);
+            impostorCount = (totalPlayers / 3).ceil().clamp(
+              1,
+              totalPlayers - 1,
+            );
           }
         }
-        
-        // Hain sayısını güvenli aralıkta tut  
+
+        // Hain sayısını güvenli aralıkta tut
         impostorCount = impostorCount.clamp(0, totalPlayers - 1);
-        
+
         // Rastgele oyuncuları hain olarak seç
         final List<String> shuffledPlayers = List.from(players);
         shuffledPlayers.shuffle(random);
-        final List<String> impostors = shuffledPlayers.take(impostorCount).toList();
-        
+        final List<String> impostors = shuffledPlayers
+            .take(impostorCount)
+            .toList();
+
         // Tüm oyuncular için role map'i oluştur
         final Map<String, String> playerRoles = {};
         for (final player in players) {
-          playerRoles[player] = impostors.contains(player) ? 'impostor' : 'innocent';
+          playerRoles[player] = impostors.contains(player)
+              ? 'impostor'
+              : 'innocent';
         }
 
         transaction.update(lobbyRef, {
           'status': 'playing',
           'game_started': true,
           'celebrity': celebrity,
-          'impostor': impostors.isNotEmpty ? impostors.first : null, // Boş liste kontrolü
+          'impostor': impostors.isNotEmpty
+              ? impostors.first
+              : null, // Boş liste kontrolü
           'impostors': impostors, // Yeni sistem
           'player_roles': playerRoles, // Her oyuncunun rolü
           'start_time': FieldValue.serverTimestamp(),
@@ -412,7 +433,6 @@ class FirebaseService {
 
         return true;
       });
-
     } catch (e) {
       print('Oyun başlatma hatası: $e');
       await recordError(e, StackTrace.current);
@@ -424,14 +444,14 @@ class FirebaseService {
   static Future<bool> endGame(String lobbyId, String playerName) async {
     try {
       final lobbyRef = firestore.collection('lobbies').doc(lobbyId);
-      
+
       return await firestore.runTransaction((transaction) async {
         final lobbyDoc = await transaction.get(lobbyRef);
 
         if (!lobbyDoc.exists) return false;
 
         final lobbyData = lobbyDoc.data()!;
-        
+
         // Eğer oyun zaten bitmişse, duplicate request'i önle
         if (lobbyData['game_ended'] == true) {
           return true; // Zaten bitmiş
@@ -453,7 +473,6 @@ class FirebaseService {
 
         return true;
       });
-
     } catch (e) {
       print('Oyun bitirme hatası: $e');
       await recordError(e, StackTrace.current);
@@ -465,12 +484,12 @@ class FirebaseService {
   static Future<bool> resetLobbyForNewGame(String lobbyId) async {
     try {
       final lobbyRef = firestore.collection('lobbies').doc(lobbyId);
-      
+
       return await firestore.runTransaction((transaction) async {
         final lobbyDoc = await transaction.get(lobbyRef);
-        
+
         if (!lobbyDoc.exists) return false;
-        
+
         // KOMPLE TEMİZLİK - her şeyi sıfırla
         transaction.update(lobbyRef, {
           'status': 'waiting',
@@ -485,7 +504,7 @@ class FirebaseService {
           'game_duration': FieldValue.delete(),
           // Lobii tamamen temiz duruma getir
         });
-        
+
         return true;
       });
     } catch (e) {
@@ -499,7 +518,7 @@ class FirebaseService {
   static Future<void> leaveLobby(String lobbyId, String playerName) async {
     try {
       print('🚪 Oyuncu lobiden ayrılıyor: $playerName (Lobi: $lobbyId)');
-      
+
       final lobbyRef = firestore.collection('lobbies').doc(lobbyId);
       final lobbyDoc = await lobbyRef.get();
 
@@ -565,7 +584,10 @@ class FirebaseService {
   }
 
   // Lobi ayarlarını güncelle
-  static Future<bool> updateLobbySettings(String lobbyId, Map<String, dynamic> settings) async {
+  static Future<bool> updateLobbySettings(
+    String lobbyId,
+    Map<String, dynamic> settings,
+  ) async {
     try {
       final lobbyRef = firestore.collection('lobbies').doc(lobbyId);
       await lobbyRef.update({
@@ -581,62 +603,74 @@ class FirebaseService {
   }
 
   // Oyun bittikten sonra yeni lobi oluştur ve tüm oyuncuları aktar (sadece host)
-  static Future<String?> createNewLobbyWithPlayers(String oldLobbyId, String currentPlayerName) async {
+  static Future<String?> createNewLobbyWithPlayers(
+    String oldLobbyId,
+    String currentPlayerName,
+  ) async {
     try {
       print('🔄 Yeni lobi oluşturuluyor - eski oyuncularla...');
-      
+
       // Eski lobinin verilerini al
       final oldLobbyRef = firestore.collection('lobbies').doc(oldLobbyId);
       final oldLobbyDoc = await oldLobbyRef.get();
-      
+
       if (!oldLobbyDoc.exists) {
         print('❌ Eski lobi bulunamadı');
         return null;
       }
-      
+
       final oldLobbyData = oldLobbyDoc.data()!;
-      final List<String> players = List<String>.from(oldLobbyData['players'] ?? []);
+      final List<String> players = List<String>.from(
+        oldLobbyData['players'] ?? [],
+      );
       final String host = oldLobbyData['host'] ?? '';
-      final Map<String, dynamic> gameSettings = Map<String, dynamic>.from(oldLobbyData['gameSettings'] ?? {});
-      
+      final Map<String, dynamic> gameSettings = Map<String, dynamic>.from(
+        oldLobbyData['gameSettings'] ?? {},
+      );
+
       if (players.isEmpty || host.isEmpty) {
         print('❌ Oyuncu listesi veya host bilgisi eksik');
         return null;
       }
-      
+
       // SADECE HOST YENİ LOBİ OLUŞTURABİLİR
       if (currentPlayerName != host) {
-        print('⚠️ Sadece host ($host) yeni lobi oluşturabilir. Current: $currentPlayerName');
-        
+        print(
+          '⚠️ Sadece host ($host) yeni lobi oluşturabilir. Current: $currentPlayerName',
+        );
+
         // Host değilse, eski lobide new_lobby_id field'ini bekle
         int attempts = 0;
-        while (attempts < 30) { // 15 saniye bekle
+        while (attempts < 30) {
+          // 15 saniye bekle
           await Future.delayed(const Duration(milliseconds: 500));
           final updatedDoc = await oldLobbyRef.get();
           if (updatedDoc.exists) {
             final data = updatedDoc.data()!;
             if (data['new_lobby_id'] != null) {
-              print('✅ Host tarafından oluşturulan yeni lobi bulundu: ${data['new_lobby_id']}');
+              print(
+                '✅ Host tarafından oluşturulan yeni lobi bulundu: ${data['new_lobby_id']}',
+              );
               return data['new_lobby_id'] as String;
             }
           }
           attempts++;
         }
-        
+
         print('❌ Host yeni lobi oluşturmadı, timeout');
         return null;
       }
-      
+
       // Host ise yeni lobi oluştur
       final newLobbyId = DateTime.now().millisecondsSinceEpoch.toString();
       final newLobbyRef = firestore.collection('lobbies').doc(newLobbyId);
-      
+
       // Önce eski lobiye yeni lobi ID'sini yaz (diğer oyuncular için)
       await oldLobbyRef.update({
         'new_lobby_id': newLobbyId,
-        'status': 'migrating'
+        'status': 'migrating',
       });
-      
+
       // Sonra yeni lobiyi oluştur
       await newLobbyRef.set({
         'created_at': FieldValue.serverTimestamp(),
@@ -648,18 +682,17 @@ class FirebaseService {
         'game_started': false,
         // Temiz başlangıç - oyun verileri yok
       });
-      
+
       // Biraz bekle ki diğer oyuncular görebilsin
       await Future.delayed(const Duration(milliseconds: 1000));
-      
+
       // Eski lobiyi sil
       await oldLobbyRef.delete();
-      
+
       print('✅ Yeni lobi oluşturuldu: $newLobbyId');
       print('✅ ${players.length} oyuncu aktarıldı');
-      
+
       return newLobbyId;
-      
     } catch (e) {
       print('❌ Yeni lobi oluşturma hatası: $e');
       await recordError(e, StackTrace.current);
@@ -671,16 +704,17 @@ class FirebaseService {
   static Future<void> requestNewLobbyForAllPlayers(String lobbyId) async {
     try {
       print('🔄 Tüm oyuncular için yeni lobby isteği gönderiliyor...');
-      
-      final lobbyRef = FirebaseFirestore.instance.collection('lobbies').doc(lobbyId);
-      
+
+      final lobbyRef = FirebaseFirestore.instance
+          .collection('lobbies')
+          .doc(lobbyId);
+
       await lobbyRef.update({
         'new_lobby_requested': true,
         'new_lobby_requested_at': FieldValue.serverTimestamp(),
       });
-      
+
       print('✅ Yeni lobby isteği başarıyla gönderildi');
-      
     } catch (e) {
       print('❌ Yeni lobby isteği gönderme hatası: $e');
       await recordError(e, StackTrace.current);

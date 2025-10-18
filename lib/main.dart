@@ -50,7 +50,7 @@ Future<void> main() async {
 }
 
 class KimHainApp extends StatelessWidget {
-  const KimHainApp({Key? key}) : super(key: key);
+  const KimHainApp({super.key});
 
   @override
   Widget build(BuildContext context) {

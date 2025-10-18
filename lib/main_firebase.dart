@@ -8,7 +8,7 @@ import 'additional_classes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Firebase başlatma - daha güvenli şekilde
   try {
     if (!kIsWeb) {
@@ -21,7 +21,7 @@ Future<void> main() async {
     print('⚠️ Firebase başlatma hatası: $e');
     // Firebase olmadan da devam et
   }
-  
+
   // AdMob başlatma - sadece Android gerçek cihazlarda
   try {
     if (!kIsWeb && Platform.isAndroid) {
@@ -31,6 +31,6 @@ Future<void> main() async {
   } catch (e) {
     print('⚠️ AdMob başlatma hatası: $e');
   }
-  
+
   runApp(const KimHainApp());
 }

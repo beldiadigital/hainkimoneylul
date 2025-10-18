@@ -148,7 +148,7 @@ class AdMobService {
   // Banner reklam widget'ı al
   static Widget? getBannerAdWidget() {
     if (_bannerAd != null) {
-      return Container(
+      return SizedBox(
         width: _bannerAd!.size.width.toDouble(),
         height: _bannerAd!.size.height.toDouble(),
         child: AdWidget(ad: _bannerAd!),

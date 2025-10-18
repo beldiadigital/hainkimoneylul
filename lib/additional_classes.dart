@@ -378,17 +378,17 @@ class _KimHainHomeState extends State<KimHainHome>
 
   // Firebase entegrasyonu
   StreamSubscription<DocumentSnapshot>? _lobbySubscription;
-  
+
   // Processing flag for preventing double taps
   bool _isJoiningLobby = false;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Flag'leri reset et (oyun ekranından dönüldükten sonra)
     _isNavigatingToGame = false;
-    
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -503,31 +503,37 @@ class _KimHainHomeState extends State<KimHainHome>
         });
         _animationController.forward();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Online lobi oluşturuldu: $createdLobbyCode'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '❌ İnternet bağlantısı gerekli! Lütfen internet bağlantınızı kontrol edin.',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Online lobi oluşturuldu: $createdLobbyCode'),
+              duration: Duration(seconds: 1),
             ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ İnternet bağlantısı gerekli! Lütfen internet bağlantınızı kontrol edin.',
+              ),
+              duration: Duration(seconds: 1),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Bağlantı hatası: İnternet gerekli'),
             duration: Duration(seconds: 1),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Bağlantı hatası: İnternet gerekli'),
-          duration: Duration(seconds: 1),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -546,58 +552,70 @@ class _KimHainHomeState extends State<KimHainHome>
             setState(() {
               _playersInLobby.clear();
               _playersInLobby.addAll(players);
-              _lobbyCreator = host; // Host bilgisini güncelle (dinamik transfer için)
-              
+              _lobbyCreator =
+                  host; // Host bilgisini güncelle (dinamik transfer için)
+
               // Ayarları senkronize et
               if (gameSettings != null) {
                 _currentGameSettings = GameSettings(
-                  gameDurationMinutes: (gameSettings['duration'] as int? ?? 600) ~/ 60,
+                  gameDurationMinutes:
+                      (gameSettings['duration'] as int? ?? 600) ~/ 60,
                   hintsCount: gameSettings['hints_count'] as int? ?? 4,
                   impostorCount: gameSettings['impostor_count'] as int? ?? 1,
-                  selectedCategories: List<String>.from(gameSettings['selected_categories'] ?? []),
+                  selectedCategories: List<String>.from(
+                    gameSettings['selected_categories'] ?? [],
+                  ),
                 );
               }
             });
-            
+
             // Oyun başlatma sinyalini kontrol et
             if (data['game_started'] == true && data['status'] == 'playing') {
               // Sadece aktif lobide olan oyuncular için oyun başlat
               final playerName = _playerNameController.text.trim();
-              if (_currentLobbyCode != null && _playersInLobby.contains(playerName)) {
+              if (_currentLobbyCode != null &&
+                  _playersInLobby.contains(playerName)) {
                 // Çift navigasyon önleme kontrolü
                 if (!_isNavigatingToGame) {
                   _isNavigatingToGame = true;
-                  
+
                   // Lobi dinlemeyi durdur
                   _lobbySubscription?.cancel();
-                  
+
                   Navigator.push(
                     context,
                     MaterialPageRoute<String>(
                       builder: (BuildContext context) => GameScreen(
                         players: _playersInLobby,
                         gameSettings: _currentGameSettings,
-                        impostors: data['impostors'] != null 
-                          ? List<String>.from(data['impostors']) 
-                          : (data['impostor'] != null ? [data['impostor'] as String] : []),
-                        celebrities: data['celebrity'] != null ? [data['celebrity'] as String] : [],
-                        lobbyId: _currentLobbyCode, // Current lobby code'u kullan
-                        playerRoles: data['player_roles'] != null 
-                          ? Map<String, String>.from(data['player_roles']) 
-                          : null,
+                        impostors: data['impostors'] != null
+                            ? List<String>.from(data['impostors'])
+                            : (data['impostor'] != null
+                                  ? [data['impostor'] as String]
+                                  : []),
+                        celebrities: data['celebrity'] != null
+                            ? [data['celebrity'] as String]
+                            : [],
+                        lobbyId:
+                            _currentLobbyCode, // Current lobby code'u kullan
+                        playerRoles: data['player_roles'] != null
+                            ? Map<String, String>.from(data['player_roles'])
+                            : null,
                         currentPlayerName: _playerNameController.text.trim(),
                       ),
                     ),
                   ).then((newLobbyId) {
                     // Oyun bittikten sonra flag'i sıfırla
                     _isNavigatingToGame = false;
-                    
+
                     // Eğer yeni lobi ID'si dönmüşse, o lobiye geç
                     if (newLobbyId != null && newLobbyId.isNotEmpty) {
                       print('🔄 Yeni lobiye geçiliyor: $newLobbyId');
                       _currentLobbyCode = newLobbyId;
                       _lobbySubscription?.cancel(); // Eski dinleyiciyi durdur
-                      _startListeningToLobby(newLobbyId); // Yeni lobiyi dinlemeye başla
+                      _startListeningToLobby(
+                        newLobbyId,
+                      ); // Yeni lobiyi dinlemeye başla
                     } else {
                       // Normal dönüş - aynı lobiyi dinlemeye devam et
                       if (_currentLobbyCode != null) {
@@ -648,7 +666,7 @@ class _KimHainHomeState extends State<KimHainHome>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF28B463).withOpacity(0.1),
+                      color: const Color(0xFF28B463).withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -670,10 +688,7 @@ class _KimHainHomeState extends State<KimHainHome>
                       fontWeight: FontWeight.w600,
                     ),
                     hintText: 'Lobinin kodunu girin',
-                    hintStyle: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 13,
-                    ),
+                    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
                     filled: false,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
@@ -714,7 +729,7 @@ class _KimHainHomeState extends State<KimHainHome>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF19B4FF).withOpacity(0.1),
+                      color: const Color(0xFF19B4FF).withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -722,10 +737,7 @@ class _KimHainHomeState extends State<KimHainHome>
                 ),
                 child: TextField(
                   controller: _playerNameController,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                   decoration: InputDecoration(
                     labelText: '� Oyuncu Adı',
                     labelStyle: TextStyle(
@@ -734,10 +746,7 @@ class _KimHainHomeState extends State<KimHainHome>
                       fontWeight: FontWeight.w600,
                     ),
                     hintText: 'Adınızı girin',
-                    hintStyle: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 13,
-                    ),
+                    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
                     filled: false,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
@@ -768,8 +777,11 @@ class _KimHainHomeState extends State<KimHainHome>
               child: Text(
                 'İptal',
                 style: TextStyle(
-                  color: Theme.of(context).textButtonTheme.style?.foregroundColor?.resolve({}) ?? 
-                         Theme.of(context).textTheme.bodyMedium?.color,
+                  color:
+                      Theme.of(
+                        context,
+                      ).textButtonTheme.style?.foregroundColor?.resolve({}) ??
+                      Theme.of(context).textTheme.bodyMedium?.color,
                 ),
               ),
             ),
@@ -788,7 +800,7 @@ class _KimHainHomeState extends State<KimHainHome>
                   try {
                     if (_isJoiningLobby) return; // Double tap koruması
                     _isJoiningLobby = true;
-                    
+
                     // Loading göster
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -817,10 +829,12 @@ class _KimHainHomeState extends State<KimHainHome>
                           setState(() {
                             _currentLobbyCode = _lobbyCodeController.text;
                             _playersInLobby.clear();
-                            _playersInLobby.add(_playerNameController.text.trim());
+                            _playersInLobby.add(
+                              _playerNameController.text.trim(),
+                            );
                           });
                         }
-                        
+
                         if (mounted) {
                           Navigator.of(context).pop();
                           _animationController.forward();
@@ -840,7 +854,9 @@ class _KimHainHomeState extends State<KimHainHome>
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('⚠️ Lobiye katıldınız ama UI hatası: ${e.toString()}'),
+                              content: Text(
+                                '⚠️ Lobiye katıldınız ama UI hatası: ${e.toString()}',
+                              ),
                               duration: Duration(seconds: 1),
                               backgroundColor: Colors.orange,
                             ),
@@ -897,21 +913,24 @@ class _KimHainHomeState extends State<KimHainHome>
       print('⚠️ Oyun zaten başlatılıyor, buton göz ardı ediliyor');
       return;
     }
-    
+
     print('🚀 _startGameFromLobby çağrıldı - isStarting: $_isStartingGame');
     _isStartingGame = true;
-    
-    if (_playersInLobby.length < 1) { // SCREENSHOT: 1 oyuncuyla test
+
+    if (_playersInLobby.isEmpty) {
+      // SCREENSHOT: 1 oyuncuyla test
       _isStartingGame = false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Oyunu başlatmak için en az 1 oyuncu olmalı.'),
-          duration: Duration(seconds: 1),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Oyunu başlatmak için en az 1 oyuncu olmalı.'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
       return;
     }
-    
+
     if (_currentLobbyCode != null) {
       // Firebase'e oyun başlatma sinyali gönder (tüm oyuncular için senkronize)
       final gameStarted = await FirebaseService.startGame(_currentLobbyCode!);
@@ -923,7 +942,7 @@ class _KimHainHomeState extends State<KimHainHome>
           ),
         );
       }
-      
+
       _isStartingGame = false;
       // Lobi dinleyicisi otomatik olarak tüm oyuncuları oyuna yönlendirecek
     } else {
@@ -936,7 +955,8 @@ class _KimHainHomeState extends State<KimHainHome>
             gameSettings: _currentGameSettings,
             impostors: const [], // Local oyunda impostor bilgisi yok
             celebrities: const [], // Local oyunda celebrity bilgisi yok
-            currentPlayerName: _playerNameController.text.trim(), // Local oyunda da current player
+            currentPlayerName: _playerNameController.text
+                .trim(), // Local oyunda da current player
           ),
         ),
       );
@@ -948,9 +968,7 @@ class _KimHainHomeState extends State<KimHainHome>
       context,
       MaterialPageRoute<GameSettings>(
         builder: (BuildContext context) =>
-            GameSettingsScreen(
-              initialSettings: _currentGameSettings,
-            ),
+            GameSettingsScreen(initialSettings: _currentGameSettings),
       ),
     );
 
@@ -958,20 +976,21 @@ class _KimHainHomeState extends State<KimHainHome>
       setState(() {
         _currentGameSettings = updatedSettings;
       });
-      
+
       // Firebase'e ayarları senkronize et
       if (_currentLobbyCode != null) {
         final success = await FirebaseService.updateLobbySettings(
           _currentLobbyCode!,
           {
-            'duration': updatedSettings.gameDurationMinutes * 60, // Saniyeye çevir
+            'duration':
+                updatedSettings.gameDurationMinutes * 60, // Saniyeye çevir
             'hints_count': updatedSettings.hintsCount,
             'impostor_count': updatedSettings.impostorCount,
             'selected_categories': updatedSettings.selectedCategories,
           },
         );
-        
-        if (success) {
+
+        if (success && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Oyun ayarları tüm oyuncular için güncellendi.'),
@@ -980,12 +999,14 @@ class _KimHainHomeState extends State<KimHainHome>
           );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Oyun ayarları güncellendi.'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Oyun ayarları güncellendi.'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
       }
     }
   }
@@ -996,9 +1017,7 @@ class _KimHainHomeState extends State<KimHainHome>
       context,
       MaterialPageRoute<void>(
         builder: (BuildContext context) =>
-            GameSettingsScreen(
-              initialSettings: _currentGameSettings,
-            ),
+            GameSettingsScreen(initialSettings: _currentGameSettings),
       ),
     );
   }
@@ -1006,31 +1025,32 @@ class _KimHainHomeState extends State<KimHainHome>
   // Oda kodunu paylaş
   void _shareRoomCode(String roomCode) async {
     try {
-      final shareText = '🎮 HAİN KİM? Oyununa katıl!\n\n'
-                       '📱 Oda Kodu: $roomCode\n\n'
-                       '🔗 Bu kodu kopyalayıp oyunda "Lobiye Katıl" butonuna bas!\n'
-                       '👥 Arkadaşlarınla birlikte oyna ve hainleri bul!';
-      
+      final shareText =
+          '🎮 HAİN KİM? Oyununa katıl!\n\n'
+          '📱 Oda Kodu: $roomCode\n\n'
+          '🔗 Bu kodu kopyalayıp oyunda "Lobiye Katıl" butonuna bas!\n'
+          '👥 Arkadaşlarınla birlikte oyna ve hainleri bul!';
+
       // Gerçek paylaşım özelliği
-      await Share.share(
-        shareText,
-        subject: 'HAİN KİM? Oyun Davetiyesi',
-      );
+      await Share.share(shareText, subject: 'HAİN KİM? Oyun Davetiyesi');
     } catch (e) {
       // Paylaşım başarısız olursa clipboard'a kopyala
       try {
-        Clipboard.setData(ClipboardData(
-          text: '🎮 HAİN KİM? Oyununa katıl!\n\n'
+        Clipboard.setData(
+          ClipboardData(
+            text:
+                '🎮 HAİN KİM? Oyununa katıl!\n\n'
                 '📱 Oda Kodu: $roomCode\n\n'
                 '🔗 Bu kodu kopyalayıp oyunda "Lobiye Katıl" butonuna bas!\n'
-                '👥 Arkadaşlarınla birlikte oyna ve hainleri bul!'
-        ));
-        
+                '👥 Arkadaşlarınla birlikte oyna ve hainleri bul!',
+          ),
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
               '� Paylaşım metni kopyalandı!\n'
-              'WhatsApp, Telegram vb. uygulamalarda paylaşabilirsin'
+              'WhatsApp, Telegram vb. uygulamalarda paylaşabilirsin',
             ),
             duration: const Duration(seconds: 3),
             action: SnackBarAction(
@@ -1147,7 +1167,10 @@ class _KimHainHomeState extends State<KimHainHome>
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0), // 28->20, 40->24 azalttık
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20.0,
+          vertical: 24.0,
+        ), // 28->20, 40->24 azalttık
         child: AnimatedBuilder(
           animation: _offsetAnimation,
           builder: (context, child) {
@@ -1157,7 +1180,7 @@ class _KimHainHomeState extends State<KimHainHome>
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // ChatGPT Image
-                  Container(
+                  SizedBox(
                     width: 140,
                     height: 160,
                     child: ClipRRect(
@@ -1166,7 +1189,8 @@ class _KimHainHomeState extends State<KimHainHome>
                         'assets/images/ChatGPT Image Sep 11, 2025, 12_13_28 AM.png',
                         width: 140,
                         height: 160,
-                        fit: BoxFit.contain, // Resmin orijinal oranını koru, arka plan şeffaf olsun
+                        fit: BoxFit
+                            .contain, // Resmin orijinal oranını koru, arka plan şeffaf olsun
                         errorBuilder: (context, error, stackTrace) => Container(
                           width: 140,
                           height: 160,
@@ -1174,15 +1198,15 @@ class _KimHainHomeState extends State<KimHainHome>
                             gradient: const LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFF2D4A6B),
-                                Color(0xFF1A2332),
-                              ],
+                              colors: [Color(0xFF2D4A6B), Color(0xFF1A2332)],
                             ),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: const Center(
-                            child: Text('🕵️‍♂️', style: TextStyle(fontSize: 80)),
+                            child: Text(
+                              '🕵️‍♂️',
+                              style: TextStyle(fontSize: 80),
+                            ),
                           ),
                         ),
                       ),
@@ -1227,28 +1251,36 @@ class _KimHainHomeState extends State<KimHainHome>
               if (_currentLobbyCode != null)
                 _CustomLedButton(
                   text: 'OYUNU BAŞLAT',
-                  gradientColors: (_lobbyCreator != null && _lobbyCreator == _playerNameController.text.trim()) 
-                    ? const [Color(0xFF19B4FF), Color(0xFF63D6FF)]
-                    : [
-                        const Color(0xFF19B4FF).withOpacity(0.4),
-                        const Color(0xFF63D6FF).withOpacity(0.4),
-                      ],
-                  shadowColor: (_lobbyCreator != null && _lobbyCreator == _playerNameController.text.trim()) 
-                    ? const Color(0xFF19B4FF) 
-                    : const Color(0xFF19B4FF).withOpacity(0.3),
+                  gradientColors:
+                      (_lobbyCreator != null &&
+                          _lobbyCreator == _playerNameController.text.trim())
+                      ? const [Color(0xFF19B4FF), Color(0xFF63D6FF)]
+                      : [
+                          const Color(0xFF19B4FF).withValues(alpha: 0.4),
+                          const Color(0xFF63D6FF).withValues(alpha: 0.4),
+                        ],
+                  shadowColor:
+                      (_lobbyCreator != null &&
+                          _lobbyCreator == _playerNameController.text.trim())
+                      ? const Color(0xFF19B4FF)
+                      : const Color(0xFF19B4FF).withValues(alpha: 0.3),
                   fontSize: 24,
                   height: 60,
                   borderRadius: 18,
                   onTap: () {
                     print('🎯 Oyun Başlat butonuna basıldı');
-                    if (_lobbyCreator != null && _lobbyCreator == _playerNameController.text.trim()) {
-                      if (_currentLobbyCode != null && _playersInLobby.isNotEmpty) {
+                    if (_lobbyCreator != null &&
+                        _lobbyCreator == _playerNameController.text.trim()) {
+                      if (_currentLobbyCode != null &&
+                          _playersInLobby.isNotEmpty) {
                         print('✅ Oyun başlatma koşulları sağlandı');
                         _startGameFromLobby();
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Lobi oluşturmadan oyun başlatılamaz!'),
+                            content: Text(
+                              'Lobi oluşturmadan oyun başlatılamaz!',
+                            ),
                             duration: Duration(seconds: 1),
                           ),
                         );
@@ -1256,14 +1288,18 @@ class _KimHainHomeState extends State<KimHainHome>
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('👑 Sadece lobi kurucusu oyunu başlatabilir'),
+                          content: Text(
+                            '👑 Sadece lobi kurucusu oyunu başlatabilir',
+                          ),
                           duration: Duration(seconds: 2),
                         ),
                       );
                     }
                   },
                 ),
-              const SizedBox(height: 14), // Oyunu başlat ve lobi butonları arası
+              const SizedBox(
+                height: 14,
+              ), // Oyunu başlat ve lobi butonları arası
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1292,7 +1328,7 @@ class _KimHainHomeState extends State<KimHainHome>
                           border: Border.all(
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.1),
+                            ).colorScheme.onSurface.withValues(alpha: 0.1),
                             width: 1,
                           ),
                         ),
@@ -1343,8 +1379,8 @@ class _KimHainHomeState extends State<KimHainHome>
                       boxShadow: [
                         BoxShadow(
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.black.withOpacity(0.3)
-                              : const Color(0xFF19B4FF).withOpacity(0.1),
+                              ? Colors.black.withValues(alpha: 0.3)
+                              : const Color(0xFF19B4FF).withValues(alpha: 0.1),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                           spreadRadius: 1,
@@ -1455,7 +1491,9 @@ class _KimHainHomeState extends State<KimHainHome>
                                     );
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('📋 Oda kodu kopyalandı!'),
+                                        content: Text(
+                                          '📋 Oda kodu kopyalandı!',
+                                        ),
                                         duration: Duration(seconds: 1),
                                       ),
                                     );
@@ -1493,7 +1531,7 @@ class _KimHainHomeState extends State<KimHainHome>
                       decoration: BoxDecoration(
                         color: Theme.of(
                           context,
-                        ).cardTheme.color?.withOpacity(0.95),
+                        ).cardTheme.color?.withValues(alpha: 0.95),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: ListView.builder(
@@ -1501,7 +1539,8 @@ class _KimHainHomeState extends State<KimHainHome>
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _playersInLobby.length,
                         itemBuilder: (BuildContext context, int index) {
-                          final isCreator = _playersInLobby[index] == _lobbyCreator;
+                          final isCreator =
+                              _playersInLobby[index] == _lobbyCreator;
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: const Color(0xFF19B4FF),
@@ -1519,12 +1558,13 @@ class _KimHainHomeState extends State<KimHainHome>
                                 Expanded(
                                   child: Text(
                                     _playersInLobby[index],
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium?.copyWith(fontSize: 16),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(fontSize: 16),
                                   ),
                                 ),
-                                if (isCreator) 
+                                if (isCreator)
                                   const Text(
                                     '👑',
                                     style: TextStyle(fontSize: 20),
@@ -1535,7 +1575,9 @@ class _KimHainHomeState extends State<KimHainHome>
                         },
                       ),
                     ),
-                    const SizedBox(height: 14), // Oyuncu listesi ve ayarlar arası
+                    const SizedBox(
+                      height: 14,
+                    ), // Oyuncu listesi ve ayarlar arası
                     // Oyun ayarları butonu - tüm oyunculara görünür, creator olmayanlara soluk
                     Container(
                       width: double.infinity,
@@ -1543,30 +1585,36 @@ class _KimHainHomeState extends State<KimHainHome>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         gradient: LinearGradient(
-                          colors: (_lobbyCreator != null && _lobbyCreator == _playerNameController.text.trim()) 
-                            ? [
-                                const Color(0xFF28C76F),
-                                const Color(0xFF00A86B),
-                              ]
-                            : [
-                                const Color(0xFF28C76F).withOpacity(0.4),
-                                const Color(0xFF00A86B).withOpacity(0.4),
-                              ],
+                          colors:
+                              (_lobbyCreator != null &&
+                                  _lobbyCreator ==
+                                      _playerNameController.text.trim())
+                              ? [
+                                  const Color(0xFF28C76F),
+                                  const Color(0xFF00A86B),
+                                ]
+                              : [
+                                  const Color(0xFF28C76F).withValues(alpha: 0.4),
+                                  const Color(0xFF00A86B).withValues(alpha: 0.4),
+                                ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF28C76F).withOpacity(0.3),
+                            color: const Color(0xFF28C76F).withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: ElevatedButton(
-                        onPressed: (_lobbyCreator != null && _lobbyCreator == _playerNameController.text.trim()) 
-                          ? _openGameSettings  // Creator için düzenleme
-                          : _viewGameSettings, // Diğerleri için sadece görüntüleme
+                        onPressed:
+                            (_lobbyCreator != null &&
+                                _lobbyCreator ==
+                                    _playerNameController.text.trim())
+                            ? _openGameSettings // Creator için düzenleme
+                            : _viewGameSettings, // Diğerleri için sadece görüntüleme
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -1579,18 +1627,24 @@ class _KimHainHomeState extends State<KimHainHome>
                           children: [
                             Icon(
                               Icons.settings_applications_rounded,
-                              color: (_lobbyCreator != null && _lobbyCreator == _playerNameController.text.trim()) 
-                                ? Colors.white 
-                                : Colors.white.withOpacity(0.7),
+                              color:
+                                  (_lobbyCreator != null &&
+                                      _lobbyCreator ==
+                                          _playerNameController.text.trim())
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.7),
                               size: 24,
                             ),
                             const SizedBox(width: 12),
                             Text(
                               'Oyun Ayarları',
                               style: TextStyle(
-                                color: (_lobbyCreator != null && _lobbyCreator == _playerNameController.text.trim()) 
-                                  ? Colors.white 
-                                  : Colors.white.withOpacity(0.7),
+                                color:
+                                    (_lobbyCreator != null &&
+                                        _lobbyCreator ==
+                                            _playerNameController.text.trim())
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.7),
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1615,7 +1669,7 @@ class _KimHainHomeState extends State<KimHainHome>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFF4757).withOpacity(0.3),
+                            color: const Color(0xFFFF4757).withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -1626,26 +1680,26 @@ class _KimHainHomeState extends State<KimHainHome>
                           if (_currentLobbyCode != null) {
                             // Navigation flag'ini ayarla
                             _isNavigatingToGame = false;
-                            
+
                             // Firebase'den lobiden ayrıl
                             await FirebaseService.leaveLobby(
                               _currentLobbyCode!,
                               _playerNameController.text.trim(),
                             );
-                            
+
                             // Lobi dinlemeyi durdur
                             _lobbySubscription?.cancel();
-                            
+
                             // UI'yi güncelle
                             setState(() {
                               _currentLobbyCode = null;
                               _lobbyCreator = null;
                               _playersInLobby.clear();
                             });
-                            
+
                             // Animasyonu geri al
                             _animationController.reverse();
-                            
+
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Lobiden ayrıldınız.'),
@@ -1698,7 +1752,8 @@ class _KimHainHomeState extends State<KimHainHome>
           },
         ),
       ),
-      bottomNavigationBar: (!kIsWeb && _isBannerAdReady && !VipSubscriptionService.isVipActive)
+      bottomNavigationBar:
+          (!kIsWeb && _isBannerAdReady && !VipSubscriptionService.isVipActive)
           ? Container(
               alignment: Alignment.center,
               width: _bannerAd!.size.width.toDouble(),
@@ -1720,8 +1775,8 @@ class GameScreen extends StatefulWidget {
   final String? currentPlayerName; // Mevcut oyuncunun adı
 
   const GameScreen({
-    super.key, 
-    required this.players, 
+    super.key,
+    required this.players,
     this.gameSettings,
     this.impostors = const [],
     this.celebrities = const [],
@@ -1759,7 +1814,7 @@ class _GameScreenState extends State<GameScreen>
       // Oyun devam ediyorsa sadece hainler kendi ismini görebilir
       return _impostorName;
     }
-    
+
     // Oyun bittiyse herkes hain ismini görebilir
     if (widget.playerRoles != null) {
       // Multiplayer: playerRoles'dan hain olanları bul
@@ -1775,19 +1830,19 @@ class _GameScreenState extends State<GameScreen>
       // Local oyun: belirlenen hain ismini göster
       return _impostorName;
     }
-    
+
     return 'N/A';
   }
 
   @override
   void initState() {
     super.initState();
-    
+
     // Oyun bittikten sonra kullanmak için interstitial reklamı yükle
     AdMobService.loadInterstitialAd();
-    
+
     // Kategori filtrelemesi
-    if (widget.gameSettings?.selectedCategories != null && 
+    if (widget.gameSettings?.selectedCategories != null &&
         widget.gameSettings!.selectedCategories.isNotEmpty) {
       // Seçilen kategorilerden ünlüleri filtrele
       _celebritiesList = celebrities.where((celeb) {
@@ -1798,7 +1853,7 @@ class _GameScreenState extends State<GameScreen>
       // Hiç kategori seçilmemişse tüm ünlüleri dahil et
       _celebritiesList = List<Map<String, dynamic>>.from(celebrities);
     }
-    
+
     _countdownSeconds = (widget.gameSettings?.gameDurationMinutes ?? 10) * 60;
     _assignRoles();
     _gameEnded = false;
@@ -1817,7 +1872,7 @@ class _GameScreenState extends State<GameScreen>
         _animationController.forward();
       }
     });
-    
+
     // Multiplayer oyunsa game_ended listener'ı ekle
     if (widget.lobbyId != null) {
       _startGameEndListener();
@@ -1827,16 +1882,16 @@ class _GameScreenState extends State<GameScreen>
   // Oyun bitirme listener'ı
   void _startGameEndListener() {
     if (widget.lobbyId == null) return;
-    
+
     FirebaseService.listenToLobby(widget.lobbyId!).listen((snapshot) {
       if (snapshot.exists) {
         final data = snapshot.data() as Map<String, dynamic>;
-        
+
         // Oyun bitti mi kontrol et
         if (data['game_ended'] == true && mounted) {
           _gameTimer?.cancel(); // Zamanlayıcıyı durdur
           _animationController.stop(); // Animasyonu durdur
-          
+
           if (!_gameEnded) {
             setState(() {
               _gameEnded = true; // Oyunun bittiğini işaretle
@@ -1868,10 +1923,14 @@ class _GameScreenState extends State<GameScreen>
     if (widget.playerRoles != null && widget.currentPlayerName != null) {
       // Multiplayer: Firebase'den gelen rol bilgisini kullan
       final currentPlayerRole = widget.playerRoles![widget.currentPlayerName!];
-      _impostorName = (currentPlayerRole == 'impostor') ? widget.currentPlayerName : null;
+      _impostorName = (currentPlayerRole == 'impostor')
+          ? widget.currentPlayerName
+          : null;
     } else if (widget.impostors.isNotEmpty) {
       // Eski sistem: impostors listesi kullan
-      _impostorName = widget.impostors.contains(widget.currentPlayerName) ? widget.currentPlayerName : null;
+      _impostorName = widget.impostors.contains(widget.currentPlayerName)
+          ? widget.currentPlayerName
+          : null;
     } else if (widget.players.isNotEmpty) {
       // Local oyun: rastgele impostor seç
       final Random random = Random();
@@ -1917,10 +1976,11 @@ class _GameScreenState extends State<GameScreen>
   Color _getTimeColor(int totalSeconds) {
     // Mevcut oyuncunun hain olup olmadığını kontrol et
     bool isCurrentPlayerImpostor = false;
-    
+
     if (widget.playerRoles != null && widget.currentPlayerName != null) {
       // Multiplayer: PlayerRoles'dan kontrol et
-      isCurrentPlayerImpostor = widget.playerRoles![widget.currentPlayerName!] == 'impostor';
+      isCurrentPlayerImpostor =
+          widget.playerRoles![widget.currentPlayerName!] == 'impostor';
     } else if (_impostorName != null && widget.currentPlayerName != null) {
       // Local/eski sistem: impostorName ile karşılaştır
       isCurrentPlayerImpostor = (_impostorName == widget.currentPlayerName);
@@ -1962,23 +2022,26 @@ class _GameScreenState extends State<GameScreen>
               child: Text(
                 'İptal',
                 style: TextStyle(
-                  color: Theme.of(context).textButtonTheme.style?.foregroundColor?.resolve({}) ?? 
-                         Theme.of(context).textTheme.bodyMedium?.color,
+                  color:
+                      Theme.of(
+                        context,
+                      ).textButtonTheme.style?.foregroundColor?.resolve({}) ??
+                      Theme.of(context).textTheme.bodyMedium?.color,
                 ),
               ),
             ),
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop(); // Diyalogu kapat
-                
+
                 // Multiplayer ise Firebase'e oyun bitirme sinyali gönder
                 if (widget.lobbyId != null) {
                   await FirebaseService.endGame(
-                    widget.lobbyId!, 
-                    widget.players.first
+                    widget.lobbyId!,
+                    widget.players.first,
                   );
                 }
-                
+
                 _gameTimer?.cancel(); // Zamanlayıcıyı durdur
                 _animationController.stop(); // Animasyonu durdur
                 setState(() {
@@ -1996,13 +2059,14 @@ class _GameScreenState extends State<GameScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     // Mevcut oyuncunun hain olup olmadığını kontrol et
     bool isCurrentPlayerImpostor = false;
-    
+
     if (widget.playerRoles != null && widget.currentPlayerName != null) {
       // Multiplayer: PlayerRoles'dan kontrol et
-      isCurrentPlayerImpostor = widget.playerRoles![widget.currentPlayerName!] == 'impostor';
+      isCurrentPlayerImpostor =
+          widget.playerRoles![widget.currentPlayerName!] == 'impostor';
     } else if (_impostorName != null && widget.currentPlayerName != null) {
       // Local/eski sistem: impostorName ile karşılaştır
       isCurrentPlayerImpostor = (_impostorName == widget.currentPlayerName);
@@ -2068,399 +2132,424 @@ class _GameScreenState extends State<GameScreen>
             ),
           ],
         ),
-      body: Center(
-        child: _gameEnded
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    'Oyun Bitti!',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.displayLarge?.copyWith(color: Colors.redAccent),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Ortak Ünlü: ${_assignedCelebrity ?? 'N/A'}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(fontSize: 22),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    'Hain: ${_getImpostorNameForDisplay() ?? 'N/A'}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(fontSize: 22),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 50),
-                  // Modern buton tasarımı
-                  if (widget.lobbyId != null) ...[
-                    Container(
-                      width: double.infinity,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF19B4FF), Color(0xFF63D6FF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF19B4FF).withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
+        body: Center(
+          child: _gameEnded
+              ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      'Oyun Bitti!',
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        color: Colors.redAccent,
                       ),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          print('🔄 Lobiye dönüş başlatılıyor...');
-                          
-                          // Oyun tamamlandı - review service'e bildir
-                          await ReviewService.onGameCompleted();
-                          
-                          // VIP değilse interstitial reklam göster
-                          if (!VipSubscriptionService.isVipActive) {
-                            AdMobService.showInterstitialAd();
-                          }
-                          
-                          // Yeni lobi oluştur ve oyuncuları aktar
-                          if (widget.lobbyId != null && widget.currentPlayerName != null) {
-                            final newLobbyId = await FirebaseService.createNewLobbyWithPlayers(
-                              widget.lobbyId!, 
-                              widget.currentPlayerName!
-                            );
-                            
-                            if (newLobbyId != null) {
-                              print('✅ Yeni lobiye aktarım başarılı: $newLobbyId');
-                              // Ana ekrana dön ve yeni lobby kodu ile lobi oluştur
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const KimHainHome(),
-                                ),
-                                (Route<dynamic> route) => false, // Tüm stack'i temizle
-                              );
-                              
-                              // Kısa bir gecikme sonra yeni lobiye git
-                              Future.delayed(const Duration(milliseconds: 500), () {
-                                if (mounted) {
-                                  // Burada yeni lobby ile lobiye katılma işlemi yapılacak
-                                  // Şimdilik ana ekrana dönüyor, kullanıcı kodu girip katılabilir
-                                }
-                              });
-                            } else {
-                              print('❌ Yeni lobi oluşturulamadı');
-                              // Ana ekrana dön
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => const KimHainHome()),
-                                (Route<dynamic> route) => false,
-                              );
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Ortak Ünlü: ${_assignedCelebrity ?? 'N/A'}',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(fontSize: 22),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Hain: ${_getImpostorNameForDisplay() ?? 'N/A'}',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(fontSize: 22),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 50),
+                    // Modern buton tasarımı
+                    if (widget.lobbyId != null) ...[
+                      Container(
+                        width: double.infinity,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF19B4FF), Color(0xFF63D6FF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF19B4FF).withValues(alpha: 0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            print('🔄 Lobiye dönüş başlatılıyor...');
+
+                            // Oyun tamamlandı - review service'e bildir
+                            await ReviewService.onGameCompleted();
+
+                            // VIP değilse interstitial reklam göster
+                            if (!VipSubscriptionService.isVipActive) {
+                              AdMobService.showInterstitialAd();
                             }
-                          } else {
-                            Navigator.pop(context);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
+
+                            // Yeni lobi oluştur ve oyuncuları aktar
+                            if (widget.lobbyId != null &&
+                                widget.currentPlayerName != null) {
+                              final newLobbyId =
+                                  await FirebaseService.createNewLobbyWithPlayers(
+                                    widget.lobbyId!,
+                                    widget.currentPlayerName!,
+                                  );
+
+                              if (newLobbyId != null) {
+                                print(
+                                  '✅ Yeni lobiye aktarım başarılı: $newLobbyId',
+                                );
+                                // Ana ekrana dön ve yeni lobby kodu ile lobi oluştur
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const KimHainHome(),
+                                  ),
+                                  (Route<dynamic> route) =>
+                                      false, // Tüm stack'i temizle
+                                );
+
+                                // Kısa bir gecikme sonra yeni lobiye git
+                                Future.delayed(
+                                  const Duration(milliseconds: 500),
+                                  () {
+                                    if (mounted) {
+                                      // Burada yeni lobby ile lobiye katılma işlemi yapılacak
+                                      // Şimdilik ana ekrana dönüyor, kullanıcı kodu girip katılabilir
+                                    }
+                                  },
+                                );
+                              } else {
+                                print('❌ Yeni lobi oluşturulamadı');
+                                // Ana ekrana dön
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const KimHainHome(),
+                                  ),
+                                  (Route<dynamic> route) => false,
+                                );
+                              }
+                            } else {
+                              Navigator.pop(context);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          '🔄 Yeni Oyuna Hazırlan',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                          child: const Text(
+                            '🔄 Yeni Oyuna Hazırlan',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ] else ...[
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.popUntil(
-                          context,
-                          (Route<dynamic> route) => route.isFirst,
-                        );
-                      },
-                      child: const Text('Yeni Oyun Başlat'),
-                    ),
+                    ] else ...[
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.popUntil(
+                            context,
+                            (Route<dynamic> route) => route.isFirst,
+                          );
+                        },
+                        child: const Text('Yeni Oyun Başlat'),
+                      ),
+                    ],
                   ],
-                ],
-              )
-            : LayoutBuilder(
-                builder: (context, constraints) {
-                  final double maxImageSize = constraints.maxWidth < 400
-                      ? 110
-                      : 140;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        // Ünlü görseli veya hain ikonu (büyütülmüş)
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: isCurrentPlayerImpostor
-                                  ? [
-                                      Colors.red,
-                                      Colors.redAccent,
-                                    ] // Hain için kırmızı
-                                  : [
-                                      const Color(0xFF19B4FF),
-                                      const Color(0xFF63D6FF),
-                                    ], // Masum için mavi
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(36),
-                            boxShadow: [
-                              BoxShadow(
-                                offset: Offset(0, 8),
-                                color:
-                                    (isCurrentPlayerImpostor
-                                            ? Colors.red
-                                            : const Color(0xFF19B4FF))
-                                        .withOpacity(0.13),
-                                blurRadius: 22,
-                              ),
-                            ],
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(18),
+                )
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double maxImageSize = constraints.maxWidth < 400
+                        ? 110
+                        : 140;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          // Ünlü görseli veya hain ikonu (büyütülmüş)
+                          Container(
+                            padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).cardTheme.color,
-                              borderRadius: BorderRadius.circular(30),
+                              gradient: LinearGradient(
+                                colors: isCurrentPlayerImpostor
+                                    ? [
+                                        Colors.red,
+                                        Colors.redAccent,
+                                      ] // Hain için kırmızı
+                                    : [
+                                        const Color(0xFF19B4FF),
+                                        const Color(0xFF63D6FF),
+                                      ], // Masum için mavi
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(36),
+                              boxShadow: [
+                                BoxShadow(
+                                  offset: Offset(0, 8),
+                                  color:
+                                      (isCurrentPlayerImpostor
+                                              ? Colors.red
+                                              : const Color(0xFF19B4FF))
+                                          .withValues(alpha: 0.13),
+                                  blurRadius: 22,
+                                ),
+                              ],
                             ),
-                            child: isCurrentPlayerImpostor
-                                ? Icon(
-                                    Icons.person_off, // Hain için özel ikon
-                                    size: maxImageSize + 60,
-                                    color: Colors.red,
-                                  )
-                                : celebrityImageUrl != null
-                                ? (_isCelebrityImageUrlNetwork
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            24,
-                                          ),
-                                          child: Image.network(
-                                            celebrityImageUrl ?? '',
-                                            width: maxImageSize + 60,
-                                            height: maxImageSize + 60,
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    Icon(
-                                                      Icons.person,
-                                                      size: maxImageSize + 60,
-                                                      color: const Color(
-                                                        0xFF19B4FF,
-                                                      ),
-                                                    ),
-                                          ),
-                                        )
-                                      : ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            24,
-                                          ),
-                                          child: Image.asset(
-                                            celebrityImageUrl ??
-                                                'assets/images/detective_logo.png',
-                                            width: maxImageSize + 60,
-                                            height: maxImageSize + 60,
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    Icon(
-                                                      Icons.person,
-                                                      size: maxImageSize + 60,
-                                                      color: const Color(
-                                                        0xFF19B4FF,
-                                                      ),
-                                                    ),
-                                          ),
-                                        ))
-                                : Icon(
-                                    Icons.person, // Masum için mavi ikon
-                                    size: maxImageSize + 60,
-                                    color: const Color(0xFF19B4FF),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 22),
-                        // Ünlü adı veya HAİN yazısı (büyük)
-                        Text(
-                          displayText,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                fontSize: 38,
-                                fontWeight: FontWeight.w900,
-                                color: isCurrentPlayerImpostor
-                                    ? Colors.redAccent
-                                    : null,
+                            child: Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).cardTheme.color,
+                                borderRadius: BorderRadius.circular(30),
                               ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        // "Masum" yazısı sadece masumlar için (büyük)
-                        if (!isCurrentPlayerImpostor)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6, bottom: 12),
-                            child: Text(
-                              'MASUM',
-                              style: TextStyle(
-                                color: const Color(0xFF19B4FF), // Masum mavi
-                                fontWeight: FontWeight.w900,
-                                fontSize: 32,
-                                letterSpacing: 1.2,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              textAlign: TextAlign.center,
+                              child: isCurrentPlayerImpostor
+                                  ? Icon(
+                                      Icons.person_off, // Hain için özel ikon
+                                      size: maxImageSize + 60,
+                                      color: Colors.red,
+                                    )
+                                  : celebrityImageUrl != null
+                                  ? (_isCelebrityImageUrlNetwork
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              24,
+                                            ),
+                                            child: Image.network(
+                                              celebrityImageUrl ?? '',
+                                              width: maxImageSize + 60,
+                                              height: maxImageSize + 60,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => Icon(
+                                                    Icons.person,
+                                                    size: maxImageSize + 60,
+                                                    color: const Color(
+                                                      0xFF19B4FF,
+                                                    ),
+                                                  ),
+                                            ),
+                                          )
+                                        : ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              24,
+                                            ),
+                                            child: Image.asset(
+                                              celebrityImageUrl ??
+                                                  'assets/images/detective_logo.png',
+                                              width: maxImageSize + 60,
+                                              height: maxImageSize + 60,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => Icon(
+                                                    Icons.person,
+                                                    size: maxImageSize + 60,
+                                                    color: const Color(
+                                                      0xFF19B4FF,
+                                                    ),
+                                                  ),
+                                            ),
+                                          ))
+                                  : Icon(
+                                      Icons.person, // Masum için mavi ikon
+                                      size: maxImageSize + 60,
+                                      color: const Color(0xFF19B4FF),
+                                    ),
                             ),
                           ),
-                        const SizedBox(height: 10),
-                        // İpuçları grid
-                        SizedBox(
-                          width: double.infinity,
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: hintsToShow.length <= 2
-                                      ? hintsToShow.length
-                                      : 2,
-                                  mainAxisSpacing: 4,
-                                  crossAxisSpacing: 4,
-                                  childAspectRatio: hintsToShow.length <= 2
-                                      ? 6.0
-                                      : 3.2,
+                          const SizedBox(height: 22),
+                          // Ünlü adı veya HAİN yazısı (büyük)
+                          Text(
+                            displayText,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  fontSize: 38,
+                                  fontWeight: FontWeight.w900,
+                                  color: isCurrentPlayerImpostor
+                                      ? Colors.redAccent
+                                      : null,
                                 ),
-                            itemCount: hintsToShow.length,
-                            itemBuilder: (context, index) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 4,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          // "Masum" yazısı sadece masumlar için (büyük)
+                          if (!isCurrentPlayerImpostor)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 6,
+                                bottom: 12,
+                              ),
+                              child: Text(
+                                'MASUM',
+                                style: TextStyle(
+                                  color: const Color(0xFF19B4FF), // Masum mavi
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 32,
+                                  letterSpacing: 1.2,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(
-                                    context,
-                                  ).cardTheme.color?.withOpacity(0.93),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isCurrentPlayerImpostor
-                                        ? Colors.red.withOpacity(
-                                            0.5,
-                                          ) // Hain için kırmızı çerçeve
-                                        : const Color(0xFF19B4FF).withOpacity(
-                                            0.5,
-                                          ), // Masum için mavi çerçeve
-                                    width: 1.5,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          const SizedBox(height: 10),
+                          // İpuçları grid
+                          SizedBox(
+                            width: double.infinity,
+                            child: GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: hintsToShow.length <= 2
+                                        ? hintsToShow.length
+                                        : 2,
+                                    mainAxisSpacing: 4,
+                                    crossAxisSpacing: 4,
+                                    childAspectRatio: hintsToShow.length <= 2
+                                        ? 6.0
+                                        : 3.2,
                                   ),
-                                ),
-                                child: Text(
-                                  hintsToShow[index],
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(fontSize: 13),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
+                              itemCount: hintsToShow.length,
+                              itemBuilder: (context, index) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).cardTheme.color?.withValues(alpha: 0.93),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isCurrentPlayerImpostor
+                                          ? Colors.red.withOpacity(
+                                              0.5,
+                                            ) // Hain için kırmızı çerçeve
+                                          : const Color(0xFF19B4FF).withOpacity(
+                                              0.5,
+                                            ), // Masum için mavi çerçeve
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    hintsToShow[index],
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(fontSize: 13),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          // Kalan süre
+                          AnimatedBuilder(
+                            animation: _animationController,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: _countdownSeconds <= 10
+                                    ? _scaleAnimation.value
+                                    : 1.0,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).cardTheme.color,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: _getTimeColor(_countdownSeconds),
+                                      width: 2.2,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _formatTime(_countdownSeconds),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                          color: _getTimeColor(
+                                            _countdownSeconds,
+                                          ),
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.2,
+                                        ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               );
                             },
                           ),
-                        ),
-                        const SizedBox(height: 18),
-                        // Kalan süre
-                        AnimatedBuilder(
-                          animation: _animationController,
-                          builder: (context, child) {
-                            return Transform.scale(
-                              scale: _countdownSeconds <= 10
-                                  ? _scaleAnimation.value
-                                  : 1.0,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).cardTheme.color,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: _getTimeColor(_countdownSeconds),
-                                    width: 2.2,
-                                  ),
-                                ),
-                                child: Text(
-                                  _formatTime(_countdownSeconds),
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(
-                                        color: _getTimeColor(_countdownSeconds),
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.2,
-                                      ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          const SizedBox(height: 18),
+                          // Bilgilendirici metin
+                          if (isCurrentPlayerImpostor)
+                            Text(
+                              'Yukarıdaki ipuçları masumların ünlüsü için!\nOnları kandır!',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
                               ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 18),
-                        // Bilgilendirici metin
-                        if (isCurrentPlayerImpostor)
-                          Text(
-                            'Yukarıdaki ipuçları masumların ünlüsü için!\nOnları kandır!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
+                              textAlign: TextAlign.center,
+                            )
+                          else
+                            Text(
+                              'Bu sizin ünlünüz ve ipuçlarınız!\nHaini bulun!',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: const Color(0xFF19B4FF),
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
-                          )
-                        else
-                          Text(
-                            'Bu sizin ünlünüz ve ipuçlarınız!\nHaini bulun!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: const Color(0xFF19B4FF),
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
         ),
       ),
     );
@@ -2504,13 +2593,9 @@ class _CustomLedButtonState extends State<_CustomLedButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -2560,13 +2645,17 @@ class _CustomLedButtonState extends State<_CustomLedButton>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: widget.shadowColor.withOpacity(_isPressed ? 0.25 : 0.35),
+                  color: widget.shadowColor.withOpacity(
+                    _isPressed ? 0.25 : 0.35,
+                  ),
                   blurRadius: _isPressed ? 12 : 16,
                   spreadRadius: _isPressed ? 1 : 2,
                   offset: Offset(0, _isPressed ? 4 : 6),
                 ),
                 BoxShadow(
-                  color: widget.shadowColor.withOpacity(_isPressed ? 0.12 : 0.18),
+                  color: widget.shadowColor.withOpacity(
+                    _isPressed ? 0.12 : 0.18,
+                  ),
                   blurRadius: _isPressed ? 24 : 32,
                   offset: Offset(0, _isPressed ? 6 : 8),
                 ),
@@ -2593,7 +2682,7 @@ class _CustomLedButtonState extends State<_CustomLedButton>
                         letterSpacing: 1.1,
                         shadows: [
                           Shadow(
-                            color: Colors.black.withOpacity(0.15),
+                            color: Colors.black.withValues(alpha: 0.15),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -2615,10 +2704,7 @@ class _CustomLedButtonState extends State<_CustomLedButton>
 class GameSettingsScreen extends StatefulWidget {
   final GameSettings initialSettings;
 
-  const GameSettingsScreen({
-    super.key,
-    required this.initialSettings,
-  });
+  const GameSettingsScreen({super.key, required this.initialSettings});
 
   @override
   State<GameSettingsScreen> createState() => _GameSettingsScreenState();
@@ -2668,7 +2754,9 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
           backgroundColor: Theme.of(context).brightness == Brightness.dark
               ? const Color(0xFF1C1C1E)
               : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
               const Icon(Icons.star, color: Colors.amber, size: 28),
@@ -2733,7 +2821,13 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
     );
   }
 
-  Widget _buildSubscriptionCard(String title, String price, String period, VoidCallback onTap, {bool isPopular = false}) {
+  Widget _buildSubscriptionCard(
+    String title,
+    String price,
+    String period,
+    VoidCallback onTap, {
+    bool isPopular = false,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -2746,9 +2840,15 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: isPopular ? null : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2C2C2E) : const Color(0xFFF8F9FA)),
+          color: isPopular
+              ? null
+              : (Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2C2C2E)
+                    : const Color(0xFFF8F9FA)),
           borderRadius: BorderRadius.circular(12),
-          border: isPopular ? null : Border.all(color: const Color(0xFF19B4FF), width: 1),
+          border: isPopular
+              ? null
+              : Border.all(color: const Color(0xFF19B4FF), width: 1),
         ),
         child: Column(
           children: [
@@ -2756,7 +2856,7 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
@@ -2774,7 +2874,9 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isPopular ? Colors.white : Theme.of(context).textTheme.titleMedium?.color,
+                color: isPopular
+                    ? Colors.white
+                    : Theme.of(context).textTheme.titleMedium?.color,
               ),
             ),
             const SizedBox(height: 4),
@@ -2790,7 +2892,9 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
               period,
               style: TextStyle(
                 fontSize: 12,
-                color: isPopular ? Colors.white70 : Theme.of(context).textTheme.bodySmall?.color,
+                color: isPopular
+                    ? Colors.white70
+                    : Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),
           ],
@@ -2808,7 +2912,7 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
         // Yıllık abonelik şu anda desteklenmiyor
         throw Exception('Yıllık abonelik henüz mevcut değil');
       }
-      
+
       if (success && mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2905,7 +3009,10 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                           title: 'VIP Aktif',
                           subtitle: 'Premium özellikler aktif',
                           trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.green,
                               borderRadius: BorderRadius.circular(20),
@@ -2923,8 +3030,12 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                         if (VipSubscriptionService.vipExpiryDate != null)
                           _SettingsRow(
                             title: 'Bitiş Tarihi',
-                            subtitle: '${VipSubscriptionService.vipExpiryDate!.day}/${VipSubscriptionService.vipExpiryDate!.month}/${VipSubscriptionService.vipExpiryDate!.year}',
-                            trailing: const Icon(Icons.schedule, color: Colors.grey),
+                            subtitle:
+                                '${VipSubscriptionService.vipExpiryDate!.day}/${VipSubscriptionService.vipExpiryDate!.month}/${VipSubscriptionService.vipExpiryDate!.year}',
+                            trailing: const Icon(
+                              Icons.schedule,
+                              color: Colors.grey,
+                            ),
                           ),
                       ] else ...[
                         _SettingsRow(
@@ -2935,7 +3046,10 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF19B4FF),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
                             ),
                             child: const Text('SATIN AL'),
                           ),
@@ -2945,7 +3059,7 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  
+
                   // Oyun Süresi
                   _ModernSettingsCard(
                     title: 'Oyun Süresi',
@@ -3077,10 +3191,12 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                                         )
                                       : LinearGradient(
                                           colors: [
-                                            Theme.of(context).brightness == Brightness.dark
+                                            Theme.of(context).brightness ==
+                                                    Brightness.dark
                                                 ? const Color(0xFF2C2C2E)
                                                 : Colors.white,
-                                            Theme.of(context).brightness == Brightness.dark
+                                            Theme.of(context).brightness ==
+                                                    Brightness.dark
                                                 ? const Color(0xFF1C1C1E)
                                                 : const Color(0xFFF8F9FA),
                                           ],
@@ -3091,7 +3207,8 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                                   border: Border.all(
                                     color: isSelected
                                         ? Colors.transparent
-                                        : Theme.of(context).brightness == Brightness.dark
+                                        : Theme.of(context).brightness ==
+                                              Brightness.dark
                                         ? const Color(0xFF38383A)
                                         : const Color(0xFFE5E5EA),
                                     width: 1.5,
@@ -3099,14 +3216,18 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF19B4FF).withOpacity(0.3),
+                                            color: const Color(
+                                              0xFF19B4FF,
+                                            ).withValues(alpha: 0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
                                         ]
                                       : [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
+                                            color: Colors.black.withOpacity(
+                                              0.05,
+                                            ),
                                             blurRadius: 4,
                                             offset: const Offset(0, 1),
                                           ),
@@ -3127,9 +3248,13 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                                       style: TextStyle(
                                         color: isSelected
                                             ? Colors.white
-                                            : Theme.of(context).textTheme.bodyMedium?.color,
+                                            : Theme.of(
+                                                context,
+                                              ).textTheme.bodyMedium?.color,
                                         fontSize: 14,
-                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
                                       ),
                                     ),
                                   ],
@@ -3153,21 +3278,21 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: _saveSettings,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF19B4FF),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF19B4FF),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Ayarları Kaydet',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Ayarları Kaydet',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
@@ -3267,4 +3392,3 @@ class _SettingsRow extends StatelessWidget {
     );
   }
 }
-
