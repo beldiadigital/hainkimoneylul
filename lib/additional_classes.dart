@@ -2696,27 +2696,12 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
               _buildVipFeature('🎮 Kesintisiz oyun deneyimi'),
               _buildVipFeature('⚡ Daha hızlı yükleme'),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSubscriptionCard(
-                      'Aylık',
-                      '₺9,99',
-                      '/ay',
-                      () => _purchaseSubscription('monthly'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildSubscriptionCard(
-                      'Yıllık',
-                      '₺59,99',
-                      '/yıl',
-                      () => _purchaseSubscription('yearly'),
-                      isPopular: true,
-                    ),
-                  ),
-                ],
+              _buildSubscriptionCard(
+                'VIP Üyelik',
+                '₺9,99',
+                '/ay',
+                () => _purchaseSubscription('monthly'),
+                isPopular: true,
               ),
             ],
           ),
@@ -2820,7 +2805,8 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
       if (type == 'monthly') {
         success = await VipSubscriptionService.purchaseMonthly();
       } else {
-        success = await VipSubscriptionService.purchaseYearly();
+        // Yıllık abonelik şu anda desteklenmiyor
+        throw Exception('Yıllık abonelik henüz mevcut değil');
       }
       
       if (success && mounted) {

@@ -1,0 +1,133 @@
+{
+  "identifier" : "E0C7F1C4",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "123456789",
+    "_developerTeamID" : "TEAMID123",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 709851066.74830496,
+    "_locale" : "tr_TR",
+    "_storefront" : "TUR",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21481466",
+      "localizations" : [
+
+      ],
+      "name" : "VIP Membership",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9,99 ₺",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6475052217",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Tüm reklamları kaldırır ve kesintisiz oyun deneyimi sunar",
+              "displayName" : "VIP Aylık Üyelik",
+              "locale" : "tr"
+            }
+          ],
+          "productID" : "hain_kim_vip_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "VIP Monthly",
+          "subscriptionGroupID" : "21481466",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "59,99 ₺",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6475052218",
+          "introductoryOffer" : {
+            "internalID" : "6475052219",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Tüm reklamları kaldırır ve kesintisiz oyun deneyimi sunar. %50 tasarruf!",
+              "displayName" : "VIP Yıllık Üyelik",
+              "locale" : "tr"
+            }
+          ],
+          "productID" : "hain_kim_vip_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "VIP Yearly",
+          "subscriptionGroupID" : "21481466",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

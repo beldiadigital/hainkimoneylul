@@ -4,10 +4,14 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VipSubscriptionService {
-  static const String _monthlyProductId = 'hain_kim_vip_monthly';
+  // Production App Store Product IDs - Bu ID'leri App Store Connect'te oluşturmanız gerekiyor
+  static const String _monthlyProductId = '6754197922';
   static const String _yearlyProductId = 'hain_kim_vip_yearly';
+  
+  // Local storage keys
   static const String _vipStatusKey = 'vip_status';
   static const String _vipExpiryKey = 'vip_expiry';
+  static const String _lastReceiptKey = 'last_receipt';
 
   static final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   static StreamSubscription<List<PurchaseDetails>>? _subscription;
@@ -44,10 +48,10 @@ class VipSubscriptionService {
       // Satın alma dinleyicisini başlat
       _listenToPurchaseUpdated();
 
-      // Mevcut satın almaları geri yükle
+      // Mevcut satın almaları geri yükle (önemli: uygulama her açıldığında)
       await _restorePurchases();
 
-      print('✅ VIP abonelik servisi başlatıldı');
+      print('✅ VIP abonelik servisi başlatıldı - VIP Active: $_isVipActive');
     } catch (e) {
       print('❌ VIP servis başlatma hatası: $e');
     }
@@ -56,7 +60,8 @@ class VipSubscriptionService {
   /// Ürünleri App Store/Play Store'dan yükle
   static Future<void> _loadProducts() async {
     try {
-      const Set<String> productIds = {_monthlyProductId, _yearlyProductId};
+      // Şu anda sadece aylık abonelik mevcut
+      const Set<String> productIds = {_monthlyProductId};
       final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(productIds);
 
       if (response.notFoundIDs.isNotEmpty) {
@@ -113,11 +118,9 @@ class VipSubscriptionService {
     try {
       _isVipActive = true;
       
-      // Abonelik süresini belirle
+      // Sadece aylık abonelik için süre belirle
       if (productId == _monthlyProductId) {
         _vipExpiryDate = DateTime.now().add(const Duration(days: 30));
-      } else if (productId == _yearlyProductId) {
-        _vipExpiryDate = DateTime.now().add(const Duration(days: 365));
       }
 
       // Local storage'a kaydet
@@ -185,6 +188,9 @@ class VipSubscriptionService {
         return false;
       }
 
+      print('🛒 Satın alma başlatılıyor: ${product.id} - ${product.price}');
+
+      // Abonelik satın alma
       final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
       await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
       
@@ -230,6 +236,23 @@ class VipSubscriptionService {
       _vipExpiryDate = DateTime.now().add(const Duration(days: 30));
       await _saveVipStatus();
       print('🔧 Test için VIP aktif edildi');
+    }
+  }
+
+  /// Production'da test modu kontrolü
+  static bool get isProductionMode {
+    return const bool.fromEnvironment('dart.vm.product');
+  }
+
+  /// VIP durumu debug bilgisi
+  static void logVipStatus() {
+    if (kDebugMode) {
+      print('📊 VIP Durum Raporu:');
+      print('  - VIP Aktif: $_isVipActive');
+      print('  - Bitiş Tarihi: $_vipExpiryDate');
+      print('  - Servis Hazır: $_isAvailable');
+      print('  - Ürün Sayısı: ${_products.length}');
+      print('  - Production Mode: $isProductionMode');
     }
   }
 

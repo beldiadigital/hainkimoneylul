@@ -56,5 +56,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- StoreKit 2 Configuration for testing -->
+	<key>StoreKitConfigurationFile</key>
+	<string>Configuration</string>
 </dict>
 </plist>
