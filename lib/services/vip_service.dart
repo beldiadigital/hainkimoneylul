@@ -4,8 +4,8 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VipSubscriptionService {
-  // Production App Store Product IDs - Bu ID'leri App Store Connect'te oluşturmanız gerekiyor
-  static const String _monthlyProductId = '6754197922';
+  // Production App Store Product IDs - StoreKit Configuration ile eşleşen ID'ler
+  static const String _monthlyProductId = 'hain_kim_vip_monthly';
   static const String _yearlyProductId = 'hain_kim_vip_yearly';
 
   // Local storage keys
