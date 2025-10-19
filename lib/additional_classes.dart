@@ -2315,14 +2315,6 @@ class _GameScreenState extends State<GameScreen>
           elevation: 0,
           title: const SizedBox.shrink(),
           automaticallyImplyLeading: false,
-          leading: IconButton(
-            icon: Icon(
-              Icons.exit_to_app,
-              color: Theme.of(context).appBarTheme.foregroundColor,
-              size: 28,
-            ),
-            onPressed: _endGameEarly,
-          ),
           actions: [
             IconButton(
               icon: Icon(
