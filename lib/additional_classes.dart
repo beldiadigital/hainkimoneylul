@@ -2215,7 +2215,9 @@ class _GameScreenState extends State<GameScreen>
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Text(
-            'Oyunu erken bitirmek istediğinizden emin misiniz?',
+            widget.lobbyId != null 
+              ? 'Oyunu erken bitirmek istediğinizden emin misiniz?\n\nBu işlem tüm lobideki oyuncular için oyunu sonlandıracak.'
+              : 'Oyunu erken bitirmek istediğinizden emin misiniz?',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: <Widget>[
@@ -2239,10 +2241,10 @@ class _GameScreenState extends State<GameScreen>
                 Navigator.of(context).pop(); // Diyalogu kapat
 
                 // Multiplayer ise Firebase'e oyun bitirme sinyali gönder
-                if (widget.lobbyId != null) {
+                if (widget.lobbyId != null && widget.currentPlayerName != null) {
                   await FirebaseService.endGame(
                     widget.lobbyId!,
-                    widget.players.first,
+                    widget.currentPlayerName!,
                   );
                 }
 
@@ -2315,16 +2317,6 @@ class _GameScreenState extends State<GameScreen>
           title: const SizedBox.shrink(),
           automaticallyImplyLeading: false,
           actions: [
-            // Oyun bitirme butonu - sadece oyun devam ederken görünür
-            if (!_gameEnded)
-              IconButton(
-                icon: Icon(
-                  Icons.stop_circle_outlined,
-                  color: Colors.redAccent,
-                ),
-                tooltip: 'Oyunu Bitir',
-                onPressed: _endGameEarly,
-              ),
             IconButton(
               icon: Icon(
                 themeProvider.themeMode == ThemeMode.dark
@@ -2745,9 +2737,11 @@ class _GameScreenState extends State<GameScreen>
                                 ),
                               ),
                               icon: const Icon(Icons.stop, size: 18),
-                              label: const Text(
-                                'Oyunu Bitir',
-                                style: TextStyle(
+                              label: Text(
+                                widget.lobbyId != null 
+                                  ? 'Tüm Oyuncular İçin Oyunu Bitir'
+                                  : 'Oyunu Bitir',
+                                style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
