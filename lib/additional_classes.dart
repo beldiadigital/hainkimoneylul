@@ -917,13 +917,12 @@ class _KimHainHomeState extends State<KimHainHome>
     print('🚀 _startGameFromLobby çağrıldı - isStarting: $_isStartingGame');
     _isStartingGame = true;
 
-    if (_playersInLobby.isEmpty) {
-      // SCREENSHOT: 1 oyuncuyla test
+    if (_playersInLobby.length < 2) {
       _isStartingGame = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Oyunu başlatmak için en az 1 oyuncu olmalı.'),
+            content: Text('Oyunu başlatmak için en az 2 oyuncu olmalı.'),
             duration: Duration(seconds: 1),
           ),
         );
@@ -2316,6 +2315,16 @@ class _GameScreenState extends State<GameScreen>
           title: const SizedBox.shrink(),
           automaticallyImplyLeading: false,
           actions: [
+            // Oyun bitirme butonu - sadece oyun devam ederken görünür
+            if (!_gameEnded)
+              IconButton(
+                icon: Icon(
+                  Icons.stop_circle_outlined,
+                  color: Colors.redAccent,
+                ),
+                tooltip: 'Oyunu Bitir',
+                onPressed: _endGameEarly,
+              ),
             IconButton(
               icon: Icon(
                 themeProvider.themeMode == ThemeMode.dark
@@ -2719,6 +2728,31 @@ class _GameScreenState extends State<GameScreen>
                                 ),
                               );
                             },
+                          ),
+                          const SizedBox(height: 12),
+                          // Oyun bitirme butonu
+                          SizedBox(
+                            width: double.infinity,
+                            height: 40,
+                            child: ElevatedButton.icon(
+                              onPressed: _endGameEarly,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.stop, size: 18),
+                              label: const Text(
+                                'Oyunu Bitir',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 18),
                           // Bilgilendirici metin

@@ -325,9 +325,8 @@ class FirebaseService {
           lobbyData['players'] ?? [],
         );
 
-        if (players.isEmpty) {
-          // SCREENSHOT: 1 oyuncuyla test
-          print('En az 1 oyuncu gerekli');
+        if (players.length < 2) {
+          print('En az 2 oyuncu gerekli');
           return false;
         }
 
