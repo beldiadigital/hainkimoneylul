@@ -1837,8 +1837,6 @@ class _KimHainHomeState extends State<KimHainHome>
               ),
               const SizedBox(height: 12),
               _buildVipFeature('🚫 Tüm reklamları kaldır'),
-              _buildVipFeature('🎮 Kesintisiz oyun deneyimi'),
-              _buildVipFeature('⚡ Daha hızlı yükleme'),
               const SizedBox(height: 20),
               _buildSubscriptionCard(
                 'VIP Üyelik',
@@ -2988,8 +2986,6 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
               ),
               const SizedBox(height: 12),
               _buildVipFeature('🚫 Tüm reklamları kaldır'),
-              _buildVipFeature('🎮 Kesintisiz oyun deneyimi'),
-              _buildVipFeature('⚡ Daha hızlı yükleme'),
               const SizedBox(height: 20),
               _buildSubscriptionCard(
                 'VIP Üyelik',
